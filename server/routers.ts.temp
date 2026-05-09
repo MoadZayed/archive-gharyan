@@ -1,0 +1,174 @@
+import { COOKIE_NAME } from "@shared/const";
+import { getSessionCookieOptions } from "./_core/cookies";
+import { systemRouter } from "./_core/systemRouter";
+import { publicProcedure, router } from "./_core/trpc";
+import { z } from "zod";
+import axios from "axios";
+import {
+  getStudentByID,
+  getStudentByDbId,
+  getStudentByEmail,
+  getStudentByResetToken,
+  createStudent,
+  updateStudent,
+  getAllAcademicFiles,
+  getStudentFiles,
+  createAcademicFile,
+  deleteAcademicFile,
+  updateAcademicFile,
+  getAcademicFileById,
+  approveAcademicFile,
+  voteFile,
+  addCommentToDb,
+  getCommentsByFileId,
+  getStudentComments,
+  getAdminStats,
+  getAllFilesWithUploader,
+  getAllStudents,
+  resetAllStudentsCourses,
+  resetStudentCourses,
+  toggleFavoriteInDb,
+  getStudentFavoritesFromDb,
+} from "./db";
+import { ENV } from './_core/env';
+import {
+  hashPassword,
+  verifyPassword,
+  generateToken,
+  verifyToken,
+} from "./auth";
+import { storagePut, storageGet } from "./storage";
+import { TRPCError } from "@trpc/server";
+import crypto from "crypto";
+
+// Student authentication context
+interface StudentContext {
+  studentID: string;
+  studentDbId: number | string;
+  role: string;
+  isAdmin: boolean;
+  isOAuth: boolean;
+}
+
+const studentProcedure = publicProcedure.use(async ({ ctx, next }) => {
+  // 1. Check if user is already authenticated via OAuth (cookie)
+  if (ctx.user) {
+    const isAdmin = ctx.user.role === 'admin' || ctx.user.openId === ENV.ownerOpenId;
+    return next({
+      ctx: {
+        ...ctx,
+        student: {
+          studentID: ctx.user.openId,
+          studentDbId: ctx.user.id,
+          role: ctx.user.role || 'student',
+          isOAuth: true,
+          isAdmin
+        },
+      },
+    });
+  }
+
+  // 2. Fallback to manual token (studentID)
+  const token = ctx.req.headers.authorization?.replace("Bearer ", "");
+  if (!token) {
+    throw new TRPCError({ 
+      code: "UNAUTHORIZED",
+      message: "يرجى تسجيل الدخول للوصول لهذه الميزة"
+    });
+  }
+
+  const decoded = verifyToken(token);
+  if (!decoded) {
+    throw new TRPCError({
+      code: "UNAUTHORIZED",
+      message: "انتهت صلاحية الجلسة، يرجى تسجيل الدخول مجدداً",
+    });
+  }
+
+  // Special case for Super Admin (Hardcoded string ID in token)
+  if (decoded.studentDbId === 'super-admin') {
+    return next({
+      ctx: {
+        ...ctx,
+        student: {
+          ...decoded,
+          isOAuth: false,
+          isAdmin: true
+        },
+      },
+    });
+  }
+
+  const studentData = typeof decoded.studentDbId === 'number' ? await getStudentByDbId(decoded.studentDbId) : null;
+  const isAdmin = studentData?.role === 'admin' || decoded.role === 'admin';
+
+  return next({
+    ctx: {
+      ...ctx,
+      student: {
+        ...decoded,
+        role: studentData?.role || decoded.role || 'student',
+        isOAuth: false,
+        isAdmin
+      },
+    },
+  });
+});
+
+const optionalStudentProcedure = publicProcedure.use(async ({ ctx, next }) => {
+  // 1. Check OAuth
+  if (ctx.user) {
+    const isAdmin = ctx.user.role === 'admin' || ctx.user.openId === ENV.ownerOpenId;
+    return next({
+      ctx: {
+        ...ctx,
+        student: {
+          studentID: ctx.user.openId,
+          studentDbId: ctx.user.id,
+          role: ctx.user.role || 'student',
+          isOAuth: true,
+          isAdmin
+        },
+      },
+    });
+  }
+
+  // 2. Check Token
+  const token = ctx.req.headers.authorization?.replace("Bearer ", "");
+  if (!token) {
+    return next({ ctx: { ...ctx, student: null } });
+  }
+
+  const decoded = verifyToken(token);
+  if (!decoded) {
+    return next({ ctx: { ...ctx, student: null } });
+  }
+
+  if (decoded.studentDbId === 'super-admin') {
+    return next({
+      ctx: {
+        ...ctx,
+        student: {
+          ...decoded,
+          isOAuth: false,
+          isAdmin: true
+        },
+      },
+    });
+  }
+
+  const studentData = typeof decoded.studentDbId === 'number' ? await getStudentByDbId(decoded.studentDbId) : null;
+  const isAdmin = studentData?.role === 'admin' || decoded.role === 'admin';
+
+  return next({
+    ctx: {
+      ...ctx,
+      student: {
+        ...decoded,
+        role: studentData?.role || decoded.role || 'student',
+        isOAuth: false,
+        isAdmin
+      },
+    },
+  });
+});
