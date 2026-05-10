@@ -45,7 +45,7 @@ export const students = mysqlTable('students', {
   lastInteractionAt: timestamp("lastInteractionAt").defaultNow(),
   isAccountLocked: boolean("isAccountLocked").default(false).notNull(),
   deletedAt: timestamp("deletedAt"),
-  reputationPoints: int("reputationPoints").default(0).notNull(),
+  petals: int("petals").default(0).notNull(),
   verificationStatus: mysqlEnum('verificationStatus', ['PENDING', 'VERIFIED', 'REJECTED']).default('PENDING').notNull(),
   onboardingCompleted: boolean("onboardingCompleted").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

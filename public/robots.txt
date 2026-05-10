@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /graphql
+Disallow: /api
+
+Sitemap: https://gita-gharyan.edu.ly/sitemap.xml

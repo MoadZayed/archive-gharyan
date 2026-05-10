@@ -31,7 +31,7 @@ export default function Leaderboard() {
   useDocumentTitle("لوحة الشرف");
 
   const isFemale = genderTheme === 'female';
-  const leaderboardQuery = trpc.leaderboard.getTopContributors.useQuery();
+  const leaderboardQuery = trpc.stats.getLeaderboard.useQuery();
 
   const topThree = useMemo(() => leaderboardQuery.data?.slice(0, 3) || [], [leaderboardQuery.data]);
   const others = useMemo(() => leaderboardQuery.data?.slice(3) || [], [leaderboardQuery.data]);
@@ -86,10 +86,10 @@ export default function Leaderboard() {
                 </div>
                 <h3 className={`text-xl font-black mb-1 mt-4 ${isFemale ? 'text-pink-900' : 'text-white'}`}>{topThree[1].fullName}</h3>
                 <div className="flex justify-center mb-2">
-                  <ReputationBadge points={topThree[1].reputationPoints} />
+                  <ReputationBadge points={topThree[1].petals} />
                 </div>
                 <p className={`text-2xl font-black ${isFemale ? 'text-pink-500' : 'text-blue-400'}`}>
-                  {topThree[1].reputationPoints} <span className="text-xs">{pointLabel}</span>
+                  {topThree[1].petals} <span className="text-xs">{pointLabel}</span>
                 </p>
                 <div className="mt-4 text-[10px] font-black opacity-50 uppercase tracking-widest">المراكز الفضية</div>
               </Card>
@@ -115,10 +115,10 @@ export default function Leaderboard() {
                 </div>
                 <h3 className={`text-3xl font-black mb-2 mt-6 ${isFemale ? 'text-pink-900' : 'text-white'}`}>{topThree[0].fullName}</h3>
                 <div className="flex justify-center mb-3">
-                  <ReputationBadge points={topThree[0].reputationPoints} />
+                  <ReputationBadge points={topThree[0].petals} />
                 </div>
                 <p className={`text-4xl font-black ${isFemale ? 'text-pink-600' : 'text-yellow-400'}`}>
-                  {topThree[0].reputationPoints} <span className="text-sm">{pointLabel}</span>
+                  {topThree[0].petals} <span className="text-sm">{pointLabel}</span>
                 </p>
                 <div className="mt-6 flex justify-center gap-2">
                   <Sparkles className="text-yellow-500" />
@@ -143,10 +143,10 @@ export default function Leaderboard() {
                 </div>
                 <h3 className={`text-lg font-black mb-1 mt-4 ${isFemale ? 'text-pink-900' : 'text-white'}`}>{topThree[2].fullName}</h3>
                 <div className="flex justify-center mb-2">
-                  <ReputationBadge points={topThree[2].reputationPoints} />
+                  <ReputationBadge points={topThree[2].petals} />
                 </div>
                 <p className={`text-xl font-black ${isFemale ? 'text-pink-500' : 'text-blue-400'}`}>
-                  {topThree[2].reputationPoints} <span className="text-xs">{pointLabel}</span>
+                  {topThree[2].petals} <span className="text-xs">{pointLabel}</span>
                 </p>
                 <div className="mt-4 text-[10px] font-black opacity-50 uppercase tracking-widest">المركز البرونزي</div>
               </Card>
@@ -171,13 +171,13 @@ export default function Leaderboard() {
                   <div>
                     <div className="flex items-center gap-2">
                       <h4 className={`font-black text-lg ${isFemale ? 'text-pink-900' : 'text-white'}`}>{student.fullName}</h4>
-                      <ReputationBadge points={student.reputationPoints} showLabel={false} />
+                      <ReputationBadge points={student.petals} showLabel={false} />
                     </div>
                     <p className="text-[10px] font-bold opacity-40">{student.studentID}</p>
                   </div>
                 </div>
                 <div className="text-left">
-                  <span className={`text-2xl font-black ${isFemale ? 'text-pink-500' : 'text-blue-400'}`}>{student.reputationPoints}</span>
+                  <span className={`text-2xl font-black ${isFemale ? 'text-pink-500' : 'text-blue-400'}`}>{student.petals}</span>
                   <span className="text-[10px] font-black mr-2 opacity-50 uppercase tracking-widest">{isFemale ? "بتلة" : "وسام"}</span>
                 </div>
               </Card>

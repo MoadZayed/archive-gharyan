@@ -1,8 +1,11 @@
 {
   "version": 2,
   "framework": "vite",
+  "cleanUrls": true,
+  "trailingSlash": false,
   "rewrites": [
     { "source": "/api/(.*)", "destination": "https://gita-backend.railway.app/api/$1" },
+    { "source": "/trpc/(.*)", "destination": "https://gita-backend.railway.app/api/trpc/$1" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [

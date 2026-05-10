@@ -11,7 +11,6 @@ let _pool: mysql.Pool | null = null;
 
 let _initialized = false;
 
-// Core Schema SQL for Auto-Initialization
 const SCHEMA_SQL = [
   `CREATE TABLE IF NOT EXISTS students (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -33,7 +32,7 @@ const SCHEMA_SQL = [
     lastInteractionAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     isAccountLocked BOOLEAN DEFAULT FALSE NOT NULL,
     deletedAt TIMESTAMP NULL,
-    reputationPoints INT DEFAULT 0 NOT NULL,
+    petals INT DEFAULT 0 NOT NULL,
     verificationStatus ENUM('PENDING', 'VERIFIED', 'REJECTED') DEFAULT 'PENDING' NOT NULL,
     createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL
@@ -167,11 +166,11 @@ export async function getDb() {
         }
 
         try {
-          await _pool.query("ALTER TABLE students ADD COLUMN reputationPoints INT DEFAULT 0 NOT NULL");
-          console.log("[Database] Added reputationPoints column to students table");
+          await _pool.query("ALTER TABLE students ADD COLUMN petals INT DEFAULT 0 NOT NULL");
+          console.log("[Database] Added petals column to students table");
         } catch (err: any) {
           if (!err.message?.includes("Duplicate column name")) {
-             console.error("[Database] Failed to add reputationPoints column:", err.message);
+             console.error("[Database] Failed to add petals column:", err.message);
           }
         }
 
@@ -490,7 +489,7 @@ export async function getAllAcademicFiles(
     doctorName: academicFiles.doctorName,
     uploadedByStudentID: academicFiles.uploadedByStudentID,
     uploadedBy: students.fullName,
-    uploaderReputation: students.reputationPoints,
+    uploaderPetals: students.petals,
     fileUrl: academicFiles.fileUrl,
     mimeType: academicFiles.mimeType,
     views: academicFiles.views,
@@ -559,10 +558,21 @@ export async function updateAcademicFile(
 export async function approveAcademicFile(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  return await db
-    .update(academicFiles)
-    .set({ isApproved: true } as any)
-    .where(eq(academicFiles.id, id));
+
+  const [file] = await db.select().from(academicFiles).where(eq(academicFiles.id, id)).limit(1);
+  if (!file) throw new Error("File not found");
+
+  await db.update(academicFiles).set({ isApproved: true } as any).where(eq(academicFiles.id, id));
+
+  // Notify student
+  await db.insert(notifications).values({
+    userId: file.uploadedByStudentID,
+    type: 'SYSTEM',
+    message: `تمت الموافقة على ملفك "${file.fileName}" وهو متاح الآن للجميع! 🎉`,
+    isRead: false
+  });
+
+  return { success: true };
 }
 
 export async function reportAcademicFile(id: number) {
@@ -590,22 +600,65 @@ export async function voteFile(fileID: number, studentID: number, voteType: numb
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  // Check if vote exists
-  const existing = await db.select().from(fileVotes).where(
-    and(eq(fileVotes.fileID, fileID), eq(fileVotes.studentID, studentID))
-  ).limit(1);
+  return await db.transaction(async (tx) => {
+    // 1. Get file uploader info
+    const [file] = await tx.select({ uploaderId: academicFiles.uploadedByStudentID }).from(academicFiles).where(eq(academicFiles.id, fileID)).limit(1);
+    if (!file) throw new Error("File not found");
 
-  if (existing.length > 0) {
-    if (existing[0].voteType === voteType) {
-      // Remove vote if clicking same button
-      return await db.delete(fileVotes).where(eq(fileVotes.id, existing[0].id));
-    } else {
-      // Update vote type
-      return await db.update(fileVotes).set({ voteType }).where(eq(fileVotes.id, existing[0].id));
+    // 2. Check if vote exists
+    const [existing] = await tx.select().from(fileVotes).where(
+      and(eq(fileVotes.fileID, fileID), eq(fileVotes.studentID, studentID))
+    ).limit(1);
+
+    let petalChange = 0;
+
+    if (existing) {
+      if (existing.voteType === voteType) {
+        // Remove vote
+        await tx.delete(fileVotes).where(eq(fileVotes.id, existing.id));
+        petalChange = voteType === 1 ? -1 : 0; // Only upvotes affect petals
+      } else {
+        // Update vote type
+        await tx.update(fileVotes).set({ voteType }).where(eq(fileVotes.id, existing.id));
+        if (voteType === 1) {
+          petalChange = 1;
+          // Notify uploader on new upvote
+          if (file.uploadedByStudentID !== studentID) {
+            await tx.insert(notifications).values({
+              userId: file.uploadedByStudentID,
+              type: 'LIKE',
+              message: `حصل ملفك "${file.fileName}" على إعجاب! ✨`,
+              isRead: false
+            });
+          }
+        }
+        else if (existing.voteType === 1) petalChange = -1; // From up (1) to down (else)
+      }
+      // New vote
+      await tx.insert(fileVotes).values({ fileID, studentID, voteType });
+      if (voteType === 1) {
+        petalChange = 1;
+        // Notify uploader
+        if (file.uploadedByStudentID !== studentID) {
+          await tx.insert(notifications).values({
+            userId: file.uploadedByStudentID,
+            type: 'LIKE',
+            message: `حصل ملفك "${file.fileName}" على إعجاب جديد! ✨`,
+            isRead: false
+          });
+        }
+      }
     }
-  }
 
-  return await db.insert(fileVotes).values({ fileID, studentID, voteType });
+    // 3. Update uploader petals
+    if (petalChange !== 0) {
+      await tx.update(students)
+        .set({ petals: sql`${students.petals} + ${petalChange}` } as any)
+        .where(eq(students.id, file.uploaderId));
+    }
+
+    return { success: true };
+  });
 }
 
 /**
@@ -772,12 +825,29 @@ export async function getDeletedAcademicFiles() {
     .where(isNotNull(academicFiles.deletedAt));
 }
 
-export async function incrementReputation(studentId: number, points: number) {
+export async function incrementPetals(studentId: number, points: number) {
   const db = await getDb();
   if (!db) return;
   return await db.update(students)
-    .set({ reputationPoints: sql`${students.reputationPoints} + ${points}` } as any)
+    .set({ petals: sql`${students.petals} + ${points}` } as any)
     .where(eq(students.id, studentId));
+}
+
+export async function getTopStudents(limit: number = 10) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db
+    .select({
+      id: students.id,
+      studentID: students.studentID,
+      fullName: students.fullName,
+      petals: students.petals,
+      avatarUrl: students.avatarUrl
+    })
+    .from(students)
+    .where(isNull(students.deletedAt))
+    .orderBy(desc(students.petals))
+    .limit(limit);
 }
 
 export async function getAllStudents() {

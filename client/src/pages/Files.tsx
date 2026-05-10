@@ -93,7 +93,7 @@ function PinkGarden3D() {
   return (
     <div className="fixed inset-0 z-0 pointer-events-none opacity-50">
       <Suspense fallback={null}>
-        <Canvas camera={{ position: [0, 0, 10] }}>
+        <Canvas camera={{ position: [0, 0, 10] }} dpr={[1, 2]} frameloop="demand">
           <ambientLight intensity={1} />
           <Cloud opacity={0.2} speed={0.2} position={[-5, 5, -5]} color="#fff5f8" />
           {Array.from({ length: 8 }).map((_, i) => (
@@ -513,7 +513,7 @@ export default function Files() {
                         </p>
                       </div>
                     </div>
-                    <ReputationBadge points={file.uploaderReputation || 0} />
+                    <ReputationBadge points={file.uploaderPetals || 0} />
                   </div>
 
                   <div className="mt-8">

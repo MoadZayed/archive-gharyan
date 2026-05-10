@@ -173,6 +173,43 @@ export default function Register() {
               />
             </div>
           </div>
+          <div className="space-y-2">
+            <label className={`text-[10px] font-black px-4 uppercase tracking-widest glow-text ${isFemale ? 'text-pink-400' : 'text-blue-500 dark:text-blue-400'}`}>سؤال الأمان (Security Question)</label>
+            <select 
+              value={securityQuestion} 
+              onChange={(e) => setSecurityQuestion(e.target.value)} 
+              className={`w-full border h-14 rounded-2xl font-bold outline-none appearance-none px-6 transition-all ${
+                isFemale 
+                  ? 'bg-white/50 border-pink-100 text-pink-900' 
+                  : 'bg-blue-50/50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-800 text-blue-900 dark:text-white'
+              }`}
+              required
+            >
+              <option value="">اختر سؤالاً...</option>
+              <option value="ما هو اسم أول مدرسة ارتدتها؟">ما هو اسم أول مدرسة ارتدتها؟</option>
+              <option value="ما هي مدينتك المفضلة؟">ما هي مدينتك المفضلة؟</option>
+              <option value="ما هو اسم حيوانك الأليف الأول؟">ما هو اسم حيوانك الأليف الأول؟</option>
+              <option value="ما هو تخصصك المفضل؟">ما هو تخصصك المفضل؟</option>
+            </select>
+          </div>
+          <div className="space-y-2 md:col-span-2">
+            <label className={`text-[10px] font-black px-4 uppercase tracking-widest glow-text ${isFemale ? 'text-pink-400' : 'text-blue-500 dark:text-blue-400'}`}>إجابة الأمان (Security Answer)</label>
+            <div className="relative">
+              <Shield className={`absolute right-5 top-1/2 -translate-y-1/2 h-5 w-5 ${isFemale ? 'text-pink-300' : 'text-blue-400/50'}`} />
+              <Input 
+                value={securityAnswer} 
+                onChange={(e) => setSecurityAnswer(e.target.value)} 
+                placeholder="إجابتك..." 
+                className={`h-14 pr-14 rounded-2xl font-bold transition-all ${
+                  isFemale 
+                    ? 'bg-white/50 border-pink-100' 
+                    : 'bg-blue-50/50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-800 text-blue-900 dark:text-white placeholder:text-blue-300'
+                }`} 
+                required 
+                minLength={3}
+              />
+            </div>
+          </div>
 
           <Button type="submit" disabled={registerMutation.isPending} className={`md:col-span-2 h-14 font-black text-lg rounded-2xl shadow-xl transition-all hover:scale-[1.02] glow-text ${isFemale ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white' : 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white'}`}>
             {registerMutation.isPending ? <Loader2 className="animate-spin" /> : 'إنشاء حسابك الأكاديمي 🛡️'}

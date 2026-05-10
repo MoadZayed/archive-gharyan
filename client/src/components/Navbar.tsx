@@ -56,6 +56,10 @@ export default function Navbar() {
             <div className="flex items-center gap-2">
               <span className={`h-2 w-2 rounded-full ${isFemale ? 'bg-pink-500' : 'bg-green-500'}`} />
               <p className={`font-black ${isFemale ? 'text-pink-900/70' : 'text-muted-foreground'}`}>أهلاً بك، {user.fullName}</p>
+              <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black ${isFemale ? 'bg-pink-100 text-pink-600' : 'bg-blue-500/10 text-blue-400'}`}>
+                {isFemale ? <Flower size={12} /> : <Box size={12} />}
+                <span>{user.petals || 0} {isFemale ? 'بتلة' : 'نقطة'}</span>
+              </div>
               {user.verificationStatus === 'VERIFIED' && (
                 <span className="text-blue-500 shrink-0" title="حساب موثق">
                   <CheckCircle2 size={16} fill="currentColor" className="text-white fill-blue-500" />

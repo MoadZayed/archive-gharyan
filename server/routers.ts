@@ -1,4 +1,5 @@
 import { COOKIE_NAME } from "@shared/const";
+import { statsRouter } from "./statsRouter";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
@@ -39,8 +40,8 @@ import {
   getUnreadNotifications,
   markNotificationsAsRead,
   addNotification,
-  getAdvancedSystemStats,
-  incrementReputation,
+  incrementPetals,
+  getTopStudents,
   getDeletedAcademicFiles,
   incrementFileViews,
   getDb
@@ -73,6 +74,7 @@ const studentProcedure = publicProcedure.use(async ({ ctx, next }) => {
           studentID: ctx.user.openId,
           studentDbId: ctx.user.id,
           role: ctx.user.role || 'student',
+          verificationStatus: (ctx.user.role === 'admin' || ctx.user.openId === ENV.ownerOpenId) ? 'VERIFIED' : 'PENDING',
           isOAuth: true,
           isAdmin
         },
@@ -85,7 +87,7 @@ const studentProcedure = publicProcedure.use(async ({ ctx, next }) => {
   if (!decoded) throw new TRPCError({ code: "UNAUTHORIZED", message: "انتهت صلاحية الجلسة" });
   
   if (decoded.studentDbId === 'super-admin') {
-    return next({ ctx: { ...ctx, student: { ...decoded, isOAuth: false, isAdmin: true } } });
+    return next({ ctx: { ...ctx, student: { ...decoded, verificationStatus: 'VERIFIED', isOAuth: false, isAdmin: true } } });
   }
   
   const studentData = typeof decoded.studentDbId === 'number' ? await getStudentByDbId(decoded.studentDbId) : null;
@@ -96,6 +98,7 @@ const studentProcedure = publicProcedure.use(async ({ ctx, next }) => {
       student: {
         ...decoded,
         role: studentData?.role || decoded.role || 'student',
+        verificationStatus: studentData?.verificationStatus || (isAdmin ? 'VERIFIED' : 'PENDING'),
         isOAuth: false,
         isAdmin
       },
@@ -106,7 +109,7 @@ const studentProcedure = publicProcedure.use(async ({ ctx, next }) => {
 const optionalStudentProcedure = publicProcedure.use(async ({ ctx, next }) => {
   if (ctx.user) {
     const isAdmin = ctx.user.role === 'admin' || ctx.user.openId === ENV.ownerOpenId;
-    return next({ ctx: { ...ctx, student: { studentID: ctx.user.openId, studentDbId: ctx.user.id, role: ctx.user.role || 'student', isOAuth: true, isAdmin } } });
+    return next({ ctx: { ...ctx, student: { studentID: ctx.user.openId, studentDbId: ctx.user.id, role: ctx.user.role || 'student', verificationStatus: isAdmin ? 'VERIFIED' : 'PENDING', isOAuth: true, isAdmin } } });
   }
   const token = ctx.req.headers.authorization?.replace("Bearer ", "");
   if (!token) return next({ ctx: { ...ctx, student: null } });
@@ -121,81 +124,86 @@ const optionalStudentProcedure = publicProcedure.use(async ({ ctx, next }) => {
 const verifiedProcedure = studentProcedure.use(async ({ ctx, next }) => {
   if (!ctx.student) throw new TRPCError({ code: "UNAUTHORIZED" });
   if (ctx.student.isAdmin) return next();
-  if (ctx.student.verificationStatus !== 'VERIFIED') throw new TRPCError({ code: "FORBIDDEN", message: "حسابك قيد المراجعة" });
+  if (ctx.student.verificationStatus !== 'VERIFIED') throw new TRPCError({ code: "FORBIDDEN", message: "حسابك قيد المراجعة حالياً" });
   return next();
+});
+
+export const authRouter = router({
+  version: publicProcedure.query(() => "1.0.1"),
+
+  completeOnboarding: studentProcedure
+    .input(z.object({ enrolledCourses: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      await updateStudent(ctx.student.studentDbId as number, { enrolledCourses: input.enrolledCourses, onboardingCompleted: true });
+      return { success: true };
+    }),
+
+  saveEnrolledCourses: studentProcedure
+    .input(z.array(z.string()).max(6))
+    .mutation(async ({ input, ctx }) => {
+      await updateStudent(ctx.student.studentDbId as number, { enrolledCourses: JSON.stringify(input), coursesUpdatedAt: new Date() });
+      return { success: true };
+    }),
+  
+  register: publicProcedure
+    .input(z.object({ studentID: z.string(), fullName: z.string(), email: z.string(), password: z.string(), securityQuestion: z.string(), securityAnswer: z.string(), role: z.enum(["student", "professor"]).default("student") }))
+    .mutation(async ({ input }) => {
+      const existing = await getStudentByID(input.studentID);
+      if (existing) throw new TRPCError({ code: "CONFLICT", message: "رقم القيد مسجل مسبقاً" });
+      const passwordHash = await hashPassword(input.password);
+      const securityAnswerHash = await hashPassword(input.securityAnswer.trim().toLowerCase());
+      await createStudent(input.studentID, passwordHash, sanitize(input.fullName), sanitize(input.email), input.securityQuestion, securityAnswerHash, input.role);
+      const student = await getStudentByID(input.studentID);
+      if (!student) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      return { success: true, token: generateToken(input.studentID, student.id), student: { id: student.id, studentID: student.studentID, fullName: student.fullName, role: student.role, isAdmin: student.role === 'admin' } };
+    }),
+  login: publicProcedure
+    .input(z.object({ studentID: z.string(), password: z.string() }))
+    .mutation(async ({ input }) => {
+      const student = await getStudentByID(input.studentID);
+      if (!student) throw new TRPCError({ code: "NOT_FOUND", message: "رقم القيد غير مسجل" });
+      if (student.lockoutUntil && student.lockoutUntil > new Date()) throw new TRPCError({ code: "FORBIDDEN", message: "الحساب مقفل مؤقتاً" });
+      const valid = await verifyPassword(input.password, student.passwordHash || "");
+      if (!valid) {
+        const attempts = (student.failedAttempts || 0) + 1;
+        await updateStudent(student.id, { failedAttempts: attempts, lockoutUntil: attempts >= 5 ? new Date(Date.now() + 15 * 60 * 1000) : null });
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "كلمة المرور خاطئة" });
+      }
+      await updateStudent(student.id, { failedAttempts: 0, lockoutUntil: null, lastInteractionAt: new Date() });
+      return { success: true, token: generateToken(student.studentID!, student.id, student.role), student: { id: student.id, studentID: student.studentID, fullName: student.fullName, role: student.role, isAdmin: student.role === 'admin' } };
+    }),
+  adminLogin: publicProcedure
+    .input(z.object({ username: z.string(), password: z.string() }))
+    .mutation(async ({ input }) => {
+      const ADMIN_USERNAME = process.env.ADMIN_USERNAME || "admin";
+      const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
+      if (input.username === ADMIN_USERNAME && input.password === ADMIN_PASSWORD) {
+        return { success: true, token: generateToken(ADMIN_USERNAME, 'super-admin', 'admin', '7d'), student: { id: -1, studentID: ADMIN_USERNAME, fullName: "المدير العام", role: 'admin', isAdmin: true } };
+      }
+      throw new TRPCError({ code: "UNAUTHORIZED", message: "بيانات غير صحيحة" });
+    }),
+  me: optionalStudentProcedure.query(async ({ ctx }) => {
+    if (!ctx.student) return null;
+    const student = typeof ctx.student.studentDbId === 'number' ? await getStudentByDbId(ctx.student.studentDbId) : null;
+    return { ...ctx.student, fullName: student?.fullName || ctx.student.studentID, onboardingCompleted: student?.onboardingCompleted ?? false, enrolledCourses: student?.enrolledCourses ? JSON.parse(student.enrolledCourses) : [], verificationStatus: student?.verificationStatus || 'PENDING' };
+  }),
+
+  resetSemester: studentProcedure
+    .mutation(async ({ ctx }) => {
+      await updateStudent(ctx.student.studentDbId as number, {
+        enrolledCourses: null,
+        onboardingCompleted: false,
+        coursesUpdatedAt: new Date(),
+      });
+      return { success: true };
+    }),
+
+  logout: publicProcedure.mutation(async () => ({ success: true })),
 });
 
 export const appRouter = router({
   system: systemRouter,
-
-  auth: router({
-    saveEnrolledCourses: studentProcedure
-      .input(z.array(z.string()).max(6))
-      .mutation(async ({ input, ctx }) => {
-        await updateStudent(ctx.student.studentDbId as number, { enrolledCourses: JSON.stringify(input), coursesUpdatedAt: new Date() });
-        return { success: true };
-      }),
-    register: publicProcedure
-      .input(z.object({ studentID: z.string(), fullName: z.string(), email: z.string(), password: z.string(), securityQuestion: z.string(), securityAnswer: z.string(), role: z.enum(["student", "professor"]).default("student") }))
-      .mutation(async ({ input }) => {
-        const existing = await getStudentByID(input.studentID);
-        if (existing) throw new TRPCError({ code: "CONFLICT", message: "رقم القيد مسجل مسبقاً" });
-        const passwordHash = await hashPassword(input.password);
-        const securityAnswerHash = await hashPassword(input.securityAnswer.trim().toLowerCase());
-        await createStudent(input.studentID, passwordHash, sanitize(input.fullName), sanitize(input.email), input.securityQuestion, securityAnswerHash, input.role);
-        const student = await getStudentByID(input.studentID);
-        if (!student) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-        return { success: true, token: generateToken(input.studentID, student.id), student: { id: student.id, studentID: student.studentID, fullName: student.fullName, role: student.role, isAdmin: student.role === 'admin' } };
-      }),
-    login: publicProcedure
-      .input(z.object({ studentID: z.string(), password: z.string() }))
-      .mutation(async ({ input }) => {
-        const student = await getStudentByID(input.studentID);
-        if (!student) throw new TRPCError({ code: "NOT_FOUND", message: "رقم القيد غير مسجل" });
-        if (student.lockoutUntil && student.lockoutUntil > new Date()) throw new TRPCError({ code: "FORBIDDEN", message: "الحساب مقفل مؤقتاً" });
-        const valid = await verifyPassword(input.password, student.passwordHash || "");
-        if (!valid) {
-          const attempts = (student.failedAttempts || 0) + 1;
-          await updateStudent(student.id, { failedAttempts: attempts, lockoutUntil: attempts >= 5 ? new Date(Date.now() + 15 * 60 * 1000) : null });
-          throw new TRPCError({ code: "UNAUTHORIZED", message: "كلمة المرور خاطئة" });
-        }
-        await updateStudent(student.id, { failedAttempts: 0, lockoutUntil: null, lastInteractionAt: new Date() });
-        return { success: true, token: generateToken(student.studentID!, student.id, student.role), student: { id: student.id, studentID: student.studentID, fullName: student.fullName, role: student.role, isAdmin: student.role === 'admin' } };
-      }),
-    adminLogin: publicProcedure
-      .input(z.object({ username: z.string(), password: z.string() }))
-      .mutation(async ({ input }) => {
-        const ADMIN_USERNAME = process.env.ADMIN_USERNAME || "admin";
-        const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
-        if (input.username === ADMIN_USERNAME && input.password === ADMIN_PASSWORD) {
-          return { success: true, token: generateToken(ADMIN_USERNAME, 'super-admin', 'admin', '7d'), student: { id: -1, studentID: ADMIN_USERNAME, fullName: "المدير العام", role: 'admin', isAdmin: true } };
-        }
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "بيانات غير صحيحة" });
-      }),
-    me: optionalStudentProcedure.query(async ({ ctx }) => {
-      if (!ctx.student) return null;
-      const student = typeof ctx.student.studentDbId === 'number' ? await getStudentByDbId(ctx.student.studentDbId) : null;
-      return { ...ctx.student, fullName: student?.fullName || ctx.student.studentID, onboardingCompleted: student?.onboardingCompleted ?? false, enrolledCourses: student?.enrolledCourses ? JSON.parse(student.enrolledCourses) : [], verificationStatus: student?.verificationStatus || 'PENDING' };
-    }),
-    completeOnboarding: studentProcedure
-      .input(z.object({ enrolledCourses: z.string() }))
-      .mutation(async ({ input, ctx }) => {
-        await updateStudent(ctx.student.studentDbId as number, { enrolledCourses: input.enrolledCourses, onboardingCompleted: true });
-        return { success: true };
-      }),
-
-    resetSemester: studentProcedure
-      .mutation(async ({ ctx }) => {
-        await updateStudent(ctx.student.studentDbId as number, {
-          enrolledCourses: null,
-          onboardingCompleted: false,
-          coursesUpdatedAt: new Date(),
-        });
-        return { success: true };
-      }),
-
-    logout: publicProcedure.mutation(async () => ({ success: true })),
-  }),
+  auth: authRouter,
 
   admin: router({
     getDashboardStats: studentProcedure.query(async ({ ctx }) => {
@@ -211,6 +219,7 @@ export const appRouter = router({
       .mutation(async ({ input, ctx }) => {
         if (!ctx.student.isAdmin) throw new TRPCError({ code: "FORBIDDEN" });
         const db_inst = await getDb();
+        if (!db_inst) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database connection failed" });
         await db_inst.update(students).set({ verificationStatus: input.status }).where(eq(students.id, input.studentDbId));
         return { success: true };
       }),
@@ -246,9 +255,7 @@ export const appRouter = router({
       }),
   }),
 
-  stats: router({
-    getPlatformStats: publicProcedure.query(async () => await getPublicPlatformStats()),
-  }),
+  stats: statsRouter,
 
   notifications: router({
     getUnreadNotifications: studentProcedure.query(async ({ ctx }) => {
