@@ -14,7 +14,8 @@ import {
   ShieldCheck, 
   LogOut,
   Upload,
-  CheckCircle2
+  CheckCircle2,
+  BookOpen
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -84,8 +85,13 @@ export default function Navbar() {
           <Trophy size={14} />
           لوحة الصدارة
         </Button>
+
+        <Button onClick={() => navigate("/my-subjects")} variant="outline" className={`rounded-xl border-border/50 flex gap-2 font-black px-3 h-10 text-[10px] ${location === "/my-subjects" ? "border-primary text-primary" : ""} ${isFemale ? 'bg-white/50 hover:bg-pink-100 text-pink-900' : ''}`}>
+          <BookOpen size={14} />
+          موادي الدراسية
+        </Button>
         
-        <Button onClick={() => navigate("/profile")} variant="outline" className="rounded-xl font-black px-3 h-10 text-[10px]">
+        <Button onClick={() => navigate("/profile")} variant="outline" className={`rounded-xl font-black px-3 h-10 text-[10px] ${location === "/profile" ? "border-primary text-primary" : ""}`}>
           <UserIcon className="h-4 w-4" />
           بروفيلي
         </Button>

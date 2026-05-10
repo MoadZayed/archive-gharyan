@@ -47,6 +47,7 @@ export const students = mysqlTable('students', {
   deletedAt: timestamp("deletedAt"),
   reputationPoints: int("reputationPoints").default(0).notNull(),
   verificationStatus: mysqlEnum('verificationStatus', ['PENDING', 'VERIFIED', 'REJECTED']).default('PENDING').notNull(),
+  onboardingCompleted: boolean("onboardingCompleted").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

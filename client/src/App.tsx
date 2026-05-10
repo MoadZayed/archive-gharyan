@@ -117,6 +117,11 @@ function Router() {
               <Onboarding />
             </ProtectedRoute>
           </Route>
+          <Route path="/my-subjects">
+            <ProtectedRoute>
+              <Onboarding />
+            </ProtectedRoute>
+          </Route>
           <Route path="/files">
             <ProtectedRoute>
               <Files />

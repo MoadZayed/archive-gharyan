@@ -3,29 +3,34 @@ import { useLocation } from "wouter";
 import { useEffect, ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 
-interface ProtectedRouteProps {
-  children: ReactNode;
-}
+export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { user, isLoading } = useAuth();
+  const [location, navigate] = useLocation();
 
-export default function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { user, loading } = useAuth();
-  const [, navigate] = useLocation();
-
-  useEffect(() => {
-    if (!loading && !user) {
-      navigate("/login", { replace: true });
-    }
-  }, [user, loading, navigate]);
-
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-10 w-10 animate-spin text-primary opacity-20" />
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
 
-  if (!user) return null;
+  if (!user) {
+    navigate("/login");
+    return null;
+  }
+
+  // Redirect to onboarding if not completed and not already there
+  if (!user.onboardingCompleted && location !== "/onboarding" && location !== "/my-subjects") {
+    navigate("/onboarding");
+    return null;
+  }
+
+  // Prevent access to onboarding ONLY if already completed (but allow /my-subjects)
+  if (user.onboardingCompleted && location === "/onboarding") {
+    navigate("/files"); 
+    return null;
+  }
 
   return <>{children}</>;
 }

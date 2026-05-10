@@ -22,22 +22,49 @@ import { COURSES_BY_SEMESTER } from "@/lib/academicData";
 export default function Onboarding() {
   const [, navigate] = useLocation();
   const { user, refresh } = useAuth({ redirectOnUnauthenticated: true });
-  const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
+  const [selectedCourses, setSelectedCourses] = useState<string[]>(() => {
+    if (!user?.enrolledCourses) return [];
+    try {
+      return typeof user.enrolledCourses === 'string' 
+        ? JSON.parse(user.enrolledCourses) 
+        : user.enrolledCourses;
+    } catch {
+      return [];
+    }
+  });
   const [activeSemester, setActiveSemester] = useState(COURSES_BY_SEMESTER[0].semester);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [isResetOpen, setIsResetOpen] = useState(false);
+  const locationPath = location;
 
-  const saveMutation = trpc.auth.saveEnrolledCourses.useMutation({
+  const saveMutation = trpc.auth.completeOnboarding.useMutation({
     onSuccess: async () => {
       await refresh();
-      toast.success("تم تسجيل موادك بنجاح! استمتع بالفصل الدراسي.");
-      navigate("/files", { replace: true });
+      toast.success("تم تحديث موادك بنجاح!");
+      if (locationPath === "/onboarding") {
+        navigate("/files", { replace: true });
+      }
     },
     onError: (err) => {
       toast.error(err.message || "فشل حفظ المواد");
     }
   });
 
+  const resetMutation = trpc.auth.resetSemester.useMutation({
+    onSuccess: async () => {
+      await refresh();
+      setSelectedCourses([]);
+      setIsResetOpen(false);
+      toast.success("تم تصفير الفصل الدراسي بنجاح. يمكنك الآن اختيار مواد جديدة.");
+      navigate("/onboarding", { replace: true });
+    },
+    onError: (err) => {
+      toast.error(err.message || "فشل تصفير الفصل");
+    }
+  });
+
   const toggleCourse = (course: string) => {
+    // ... same as before
     if (selectedCourses.includes(course)) {
       setSelectedCourses(selectedCourses.filter(c => c !== course));
     } else {
@@ -54,13 +81,15 @@ export default function Onboarding() {
       toast.error("يرجى اختيار مادة واحدة على الأقل");
       return;
     }
-    saveMutation.mutate(selectedCourses);
+    saveMutation.mutate({ enrolledCourses: JSON.stringify(selectedCourses) });
   };
 
   if (!user) return null;
 
+  const isOnboarding = location === "/onboarding";
+
   return (
-    <div className="min-h-screen bg-background text-foreground font-sans relative overflow-hidden transition-colors duration-500">
+    <div className="min-h-screen bg-background text-foreground font-sans relative overflow-hidden transition-colors duration-500 pb-20">
       {/* Background Decorations */}
       <div className="fixed top-[-10%] left-[-10%] w-[50vw] h-[50vw] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
       <div className="fixed bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] bg-violet-600/5 rounded-full blur-[120px] pointer-events-none" />
@@ -73,7 +102,7 @@ export default function Onboarding() {
             className="inline-flex items-center gap-3 px-6 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-black uppercase tracking-[0.2em] mb-6"
           >
             <GraduationCap className="h-4 w-4" />
-            بداية فصل دراسي جديد
+            {isOnboarding ? "بداية فصل دراسي جديد" : "إدارة المواد الدراسية"}
           </motion.div>
           <motion.h1 
             initial={{ y: -20, opacity: 0 }}
@@ -81,7 +110,8 @@ export default function Onboarding() {
             transition={{ delay: 0.1 }}
             className="text-4xl md:text-6xl font-black mb-4 tracking-tight"
           >
-            أهلاً بك في <span className="text-primary">GITA Archive</span>
+            {isOnboarding ? "أهلاً بك في " : "تعديل "}
+            <span className="text-primary">{isOnboarding ? "GITA Archive" : "قائمة موادك"}</span>
           </motion.h1>
           <motion.p 
             initial={{ y: -20, opacity: 0 }}
@@ -89,7 +119,9 @@ export default function Onboarding() {
             transition={{ delay: 0.2 }}
             className="text-muted-foreground text-lg font-bold max-w-2xl mx-auto"
           >
-            يرجى اختيار موادك لهذا الفصل (بحد أقصى 6 مواد) لتتمكن من الوصول للأرشيف الأكاديمي.
+            {isOnboarding 
+              ? "يرجى اختيار موادك لهذا الفصل (بحد أقصى 6 مواد) لتتمكن من الوصول للأرشيف الأكاديمي."
+              : "يمكنك إضافة أو حذف المواد التي تدرسها في هذا الفصل الدراسي."}
           </motion.p>
         </header>
 
@@ -181,20 +213,25 @@ export default function Onboarding() {
                   <span className="text-muted-foreground font-bold text-lg">/ 6</span>
                 </div>
               </div>
-              <div className="hidden md:flex gap-2">
-                {selectedCourses.map(c => (
-                  <div key={c} className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-                ))}
-              </div>
+              
+              {!isOnboarding && (
+                <Button
+                  variant="ghost"
+                  onClick={() => setIsResetOpen(true)}
+                  className="text-destructive font-black text-xs hover:bg-destructive/10 rounded-xl px-4 h-10 border border-destructive/20"
+                >
+                  إنهاء الفصل الدراسي
+                </Button>
+              )}
             </div>
 
             <Button
               onClick={() => setIsConfirmOpen(true)}
-              disabled={selectedCourses.length === 0}
+              disabled={selectedCourses.length === 0 || saveMutation.isPending}
               className="h-14 px-12 bg-primary hover:bg-primary/90 text-primary-foreground font-black text-lg rounded-2xl shadow-xl shadow-primary/20 flex gap-3 transition-all hover:scale-[1.02] active:scale-95"
             >
-              اعتماد المواد
-              <ChevronRight className="rotate-180 h-5 w-5" />
+              {isOnboarding ? "اعتماد المواد" : "حفظ التغييرات"}
+              {saveMutation.isPending ? <Loader2 className="animate-spin h-5 w-5" /> : <ChevronRight className="rotate-180 h-5 w-5" />}
             </Button>
           </div>
         </div>
@@ -206,14 +243,14 @@ export default function Onboarding() {
           <DialogHeader>
             <DialogTitle className="text-3xl font-black text-center mb-4">هل أنت متأكد من اختيارك؟ 🎓</DialogTitle>
             <DialogDescription className="text-center font-bold text-muted-foreground leading-relaxed">
-              بمجرد التأكيد، لن تتمكن من تغيير هذه المواد إلا من خلال مراجعة إدارة الكلية. يرجى مراجعة القائمة بعناية.
+              بمجرد التأكيد، سيتم تحديث قائمة موادك الدراسية. يمكنك العودة لتعديلها في أي وقت من خلال صفحة "موادي الدراسية".
             </DialogDescription>
           </DialogHeader>
 
           <div className="bg-primary/5 rounded-[2rem] p-6 my-8 border border-primary/10">
             <h4 className="text-xs font-black text-primary uppercase tracking-widest mb-4 flex items-center gap-2">
               <BookOpen size={14} />
-              قائمة موادك لهذا الفصل:
+              قائمة موادك المختارة:
             </h4>
             <div className="flex flex-wrap gap-2">
               {selectedCourses.map(course => (
@@ -222,13 +259,6 @@ export default function Onboarding() {
                 </span>
               ))}
             </div>
-          </div>
-
-          <div className="flex items-start gap-4 p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl mb-8">
-            <AlertCircle className="text-amber-600 h-5 w-5 mt-0.5 shrink-0" />
-            <p className="text-[11px] font-bold text-amber-700 leading-relaxed">
-              تنبيه: اختيارك للمواد يحدد الملفات والأرشيف الذي يمكنك الوصول إليه. تأكد من مطابقتها لجدولك الدراسي الفعلي.
-            </p>
           </div>
 
           <DialogFooter className="gap-3">
@@ -247,6 +277,36 @@ export default function Onboarding() {
               {saveMutation.isPending ? <Loader2 className="animate-spin" /> : "نعم، تأكيد المواد"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset Semester Modal */}
+      <Dialog open={isResetOpen} onOpenChange={setIsResetOpen}>
+        <DialogContent className="max-w-md bg-card/90 backdrop-blur-2xl border-border rounded-[2.5rem] p-10">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black text-center mb-4 text-destructive">هل أتممت الفصل الدراسي؟ 🎓</DialogTitle>
+            <DialogDescription className="text-center font-bold text-muted-foreground leading-relaxed">
+              سيؤدي هذا الإجراء إلى تفريغ قائمة موادك الحالية وإعادتك لمرحلة اختيار المواد. لن يؤدي هذا لحذف ملفاتك المرفوعة مسبقاً.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col gap-3 mt-8">
+            <Button
+              onClick={() => setIsResetOpen(false)}
+              variant="outline"
+              className="h-14 rounded-2xl font-black border-border hover:bg-muted/50"
+            >
+              تراجع
+            </Button>
+            <Button
+              onClick={() => resetMutation.mutate()}
+              disabled={resetMutation.isPending}
+              variant="destructive"
+              className="h-14 rounded-2xl font-black text-lg shadow-xl shadow-destructive/20"
+            >
+              {resetMutation.isPending ? <Loader2 className="animate-spin" /> : "نعم، إنهاء الفصل الدراسي"}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
