@@ -91,7 +91,7 @@
     "zod": "^4.4.2"
   },
   "engines": {
-    "node": "20.x"
+    "node": "22.x"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.2.4",

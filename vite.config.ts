@@ -72,7 +72,7 @@ export default defineConfig({
     outDir: path.resolve(__dirname, "dist/public"),
     emptyOutDir: true,
     target: 'esnext', // تحسين أداء جافا سكريبت الحديثة
-    chunkSizeWarningLimit: 1000, // رفع حد التحذير لـ 1MB لتجنب إزعاج Vercel
+    chunkSizeWarningLimit: 2000, // رفع الحد لـ 2MB لضمان بناء نظيف تماماً في Vercel
     rollupOptions: {
       output: {
         manualChunks(id) {

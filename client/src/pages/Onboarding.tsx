@@ -37,7 +37,7 @@ export default function Onboarding() {
   const [isResetOpen, setIsResetOpen] = useState(false);
   const locationPath = location;
 
-  const saveMutation = trpc.auth.completeOnboarding.useMutation({
+  const saveMutation = trpc.students.completeOnboarding.useMutation({
     onSuccess: async () => {
       await refresh();
       toast.success("تم تحديث موادك بنجاح!");
@@ -50,7 +50,7 @@ export default function Onboarding() {
     }
   });
 
-  const resetMutation = trpc.auth.resetSemester.useMutation({
+  const resetMutation = trpc.students.resetSemester.useMutation({
     onSuccess: async () => {
       await refresh();
       setSelectedCourses([]);

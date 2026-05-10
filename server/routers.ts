@@ -131,19 +131,7 @@ const verifiedProcedure = studentProcedure.use(async ({ ctx, next }) => {
 export const authRouter = router({
   version: publicProcedure.query(() => "1.0.1"),
 
-  completeOnboarding: studentProcedure
-    .input(z.object({ enrolledCourses: z.string() }))
-    .mutation(async ({ input, ctx }) => {
-      await updateStudent(ctx.student.studentDbId as number, { enrolledCourses: input.enrolledCourses, onboardingCompleted: true });
-      return { success: true };
-    }),
 
-  saveEnrolledCourses: studentProcedure
-    .input(z.array(z.string()).max(6))
-    .mutation(async ({ input, ctx }) => {
-      await updateStudent(ctx.student.studentDbId as number, { enrolledCourses: JSON.stringify(input), coursesUpdatedAt: new Date() });
-      return { success: true };
-    }),
   
   register: publicProcedure
     .input(z.object({ studentID: z.string(), fullName: z.string(), email: z.string(), password: z.string(), securityQuestion: z.string(), securityAnswer: z.string(), role: z.enum(["student", "professor"]).default("student") }))
@@ -188,15 +176,7 @@ export const authRouter = router({
     return { ...ctx.student, fullName: student?.fullName || ctx.student.studentID, onboardingCompleted: student?.onboardingCompleted ?? false, enrolledCourses: student?.enrolledCourses ? JSON.parse(student.enrolledCourses) : [], verificationStatus: student?.verificationStatus || 'PENDING' };
   }),
 
-  resetSemester: studentProcedure
-    .mutation(async ({ ctx }) => {
-      await updateStudent(ctx.student.studentDbId as number, {
-        enrolledCourses: null,
-        onboardingCompleted: false,
-        coursesUpdatedAt: new Date(),
-      });
-      return { success: true };
-    }),
+
 
   logout: publicProcedure.mutation(async () => ({ success: true })),
 });
@@ -256,6 +236,30 @@ export const appRouter = router({
   }),
 
   stats: statsRouter,
+
+  students: router({
+    completeOnboarding: studentProcedure
+      .input(z.object({ enrolledCourses: z.string() }))
+      .mutation(async ({ input, ctx }) => {
+        await updateStudent(ctx.student.studentDbId as number, { enrolledCourses: input.enrolledCourses, onboardingCompleted: true });
+        return { success: true };
+      }),
+    saveEnrolledCourses: studentProcedure
+      .input(z.array(z.string()).max(6))
+      .mutation(async ({ input, ctx }) => {
+        await updateStudent(ctx.student.studentDbId as number, { enrolledCourses: JSON.stringify(input), coursesUpdatedAt: new Date() });
+        return { success: true };
+      }),
+    resetSemester: studentProcedure
+      .mutation(async ({ ctx }) => {
+        await updateStudent(ctx.student.studentDbId as number, {
+          enrolledCourses: null,
+          onboardingCompleted: false,
+          coursesUpdatedAt: new Date(),
+        });
+        return { success: true };
+      }),
+  }),
 
   notifications: router({
     getUnreadNotifications: studentProcedure.query(async ({ ctx }) => {
