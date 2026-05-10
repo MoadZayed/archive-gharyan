@@ -91,8 +91,7 @@
     "zod": "^4.4.2"
   },
   "engines": {
-    "node": ">=20.0.0",
-    "pnpm": ">=9.0.0"
+    "node": ">=20.0.0"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.2.4",

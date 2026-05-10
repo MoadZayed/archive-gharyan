@@ -75,14 +75,20 @@ export default defineConfig({
     chunkSizeWarningLimit: 1000, // رفع حد التحذير لـ 1MB لتجنب إزعاج Vercel
     rollupOptions: {
       output: {
-        // آلية تقسيم ذكية تمنع التداخل وتسرع التحميل
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            // تجميع المكتبات الضخمة منفصلة
-            if (id.includes('framer-motion')) return 'vendor-animation';
-            if (id.includes('lucide-react')) return 'vendor-icons';
-            if (id.includes('@radix-ui')) return 'vendor-ui';
-            return 'vendor-core'; // المكتبات الأساسية (React, etc.)
+            // فصل المكتبات الرسومية الضخمة لأنها تستهلك مساحة كبيرة
+            if (id.includes('three') || id.includes('@react-three') || id.includes('drei')) {
+              return 'vendor-3d';
+            }
+            if (id.includes('framer-motion')) {
+              return 'vendor-animation';
+            }
+            if (id.includes('lucide-react')) {
+              return 'vendor-icons';
+            }
+            // وضع باقي المكتبات في core لتقليل عدد الملفات الصغيرة
+            return 'vendor-core';
           }
         }
       }
