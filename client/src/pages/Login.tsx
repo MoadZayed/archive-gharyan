@@ -28,6 +28,7 @@ export default function Login() {
       await setAuthSession(data.token);
       toast.success(t("welcome"));
       navigate(data.student.isAdmin ? "/admin" : "/onboarding", { replace: true });
+    },
     onError: (err) => {
       if (err.data?.code === "UNAUTHORIZED") {
         toast.error("بيانات غير صحيحة");

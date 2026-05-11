@@ -36,6 +36,7 @@ export default function Register() {
       await login(data.token);
       toast.success(t("register_success") || "تم إنشاء الحساب بنجاح!");
       navigate("/onboarding", { replace: true });
+    },
     onError: (err) => {
       if (err.data?.code === "CONFLICT") {
         toast.error("رقم القيد مسجل مسبقاً");
