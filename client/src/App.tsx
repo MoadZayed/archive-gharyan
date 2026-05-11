@@ -11,6 +11,7 @@ import { useLocation } from "wouter";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { GenderProvider } from "./contexts/GenderContext";
 import "./lib/i18n";
@@ -48,6 +49,9 @@ function Router() {
     onSuccess: () => {
       setShowSemesterModal(false);
       refresh();
+    },
+    onError: (err) => {
+      toast.error(err.message);
     }
   });
 
@@ -56,6 +60,9 @@ function Router() {
       setShowSemesterModal(false);
       refresh();
       navigate("/onboarding", { replace: true });
+    },
+    onError: (err) => {
+      toast.error(err.message);
     }
   });
 
@@ -225,7 +232,9 @@ function App() {
         <ThemeProvider defaultTheme="dark" switchable={true}>
           <TooltipProvider>
             <Toaster />
-            <Router />
+            <div className="pb-32 md:pb-0">
+              <Router />
+            </div>
             <MobileBottomNav />
             <WhatsAppButton />
           </TooltipProvider>

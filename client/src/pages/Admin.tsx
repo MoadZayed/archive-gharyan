@@ -55,6 +55,7 @@ import {
 import { cn } from "@/lib/utils";
 import { COURSES, PROFESSORS } from "@/lib/academicData";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useGender } from "@/contexts/GenderContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   BarChart, 
@@ -76,12 +77,22 @@ import {
 } from "lucide-react";
 import PendingStudentsList from "@/components/PendingStudentsList";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export default function Admin() {
   const [, navigate] = useLocation();
   const { user, logout } = useAuth({ redirectOnUnauthenticated: true, redirectPath: "/login" });
   const { t, i18n } = useTranslation();
   const { theme, toggleTheme } = useTheme();
+  const { genderTheme } = useGender();
+  const isFemale = genderTheme === 'female';
 
   useDocumentTitle("لوحة الإدارة");
   const [searchTerm, setSearchTerm] = useState("");
@@ -257,14 +268,20 @@ export default function Admin() {
   return (
     <div className="min-h-screen bg-background text-foreground font-sans transition-colors duration-500 pb-20">
       {/* Background Orbs */}
-      <div className="fixed top-[-10%] left-[-10%] w-[50vw] h-[50vw] bg-violet-600/5 dark:bg-violet-600/10 rounded-full blur-[120px] pointer-events-none" />
-      <div className="fixed bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] bg-blue-600/5 dark:bg-blue-600/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className={`fixed top-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full blur-[120px] pointer-events-none ${
+        isFemale ? 'bg-pink-600/5 dark:bg-pink-600/10' : 'bg-blue-600/5 dark:bg-blue-600/10'
+      }`} />
+      <div className={`fixed bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] rounded-full blur-[120px] pointer-events-none ${
+        isFemale ? 'bg-rose-600/5 dark:bg-rose-600/10' : 'bg-indigo-600/5 dark:bg-indigo-600/10'
+      }`} />
 
       {/* Navigation */}
       <nav className="sticky top-0 z-50 backdrop-blur-2xl bg-card/60 border-b border-border px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-violet-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg ${
+              isFemale ? 'bg-gradient-to-tr from-pink-500 to-rose-600 shadow-pink-500/20' : 'bg-gradient-to-tr from-blue-600 to-indigo-600 shadow-blue-500/20'
+            }`}>
               <ShieldCheck className="h-6 w-6 text-white" />
             </div>
             <div>
@@ -311,9 +328,9 @@ export default function Admin() {
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
           {[
-            { label: "إجمالي الطلاب", value: statsQuery.data?.students || 0, icon: <Users />, color: "from-blue-600 to-cyan-500" },
-            { label: "إجمالي الملفات", value: statsQuery.data?.files || 0, icon: <FileText />, color: "from-violet-600 to-purple-500" },
-            { label: "إجمالي التعليقات", value: statsQuery.data?.comments || 0, icon: <MessageSquare />, color: "from-amber-600 to-orange-500" },
+            { label: "إجمالي الطلاب", value: statsQuery.data?.students || 0, icon: <Users />, color: isFemale ? "from-pink-600 to-rose-500" : "from-blue-600 to-cyan-500" },
+            { label: "إجمالي الملفات", value: statsQuery.data?.files || 0, icon: <FileText />, color: isFemale ? "from-fuchsia-600 to-pink-500" : "from-indigo-600 to-blue-500" },
+            { label: "إجمالي التعليقات", value: statsQuery.data?.comments || 0, icon: <MessageSquare />, color: isFemale ? "from-rose-600 to-orange-500" : "from-amber-600 to-orange-500" },
           ].map((stat, i) => (
             <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
               <Card className="relative overflow-hidden border-none bg-card/50 backdrop-blur-xl p-8 rounded-[2.5rem] shadow-xl group">
@@ -378,7 +395,7 @@ export default function Admin() {
                     value: systemStatsQuery.data?.topSubjects[0]?.subject.split('-')[1]?.trim() || "---", 
                     icon: <Activity />, 
                     trend: `${systemStatsQuery.data?.topSubjects[0]?.count || 0} مساهمة`,
-                    color: "text-violet-500 bg-violet-500/10" 
+                    color: isFemale ? "text-fuchsia-500 bg-fuchsia-500/10" : "text-indigo-500 bg-indigo-500/10" 
                   },
                   { 
                     label: "كفاءة التوزيع", 
@@ -469,8 +486,8 @@ export default function Admin() {
                             animate={{ width: `${(sub.count / (systemStatsQuery.data?.totalFiles || 1)) * 100}%` }}
                             transition={{ duration: 1, delay: i * 0.1 }}
                             className={`h-full rounded-full ${
-                              i === 0 ? 'bg-gradient-to-r from-violet-600 to-indigo-600' :
-                              i === 1 ? 'bg-gradient-to-r from-blue-600 to-cyan-500' :
+                              i === 0 ? (isFemale ? 'bg-gradient-to-r from-pink-600 to-rose-600' : 'bg-gradient-to-r from-blue-600 to-indigo-600') :
+                              i === 1 ? (isFemale ? 'bg-gradient-to-r from-fuchsia-600 to-pink-500' : 'bg-gradient-to-r from-cyan-600 to-blue-500') :
                               'bg-primary/40'
                             }`}
                           />

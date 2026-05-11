@@ -9,7 +9,7 @@ import { ar } from "date-fns/locale";
 
 export default function CommentSection({ fileID }: { fileID: number }) {
   const [commentText, setCommentText] = useState("");
-  const utils = trpc.useContext();
+  const utils = trpc.useUtils();
 
   const commentsQuery = trpc.comments.list.useQuery({ fileID });
   const addCommentMutation = trpc.comments.add.useMutation({

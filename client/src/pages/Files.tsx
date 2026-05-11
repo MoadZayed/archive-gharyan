@@ -54,6 +54,8 @@ import { Eye, Calendar, Bookmark as BookmarkIcon, Download as DownloadIcon, Chev
 import EmptyState from "@/components/EmptyState";
 import FilePreviewModal from "@/components/FilePreviewModal";
 import {
+  Tooltip,
+  TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
@@ -114,6 +116,25 @@ export default function Files() {
   const { t, i18n } = useTranslation();
   
   useDocumentTitle("الأرشيف الأكاديمي");
+
+  // Pull to Refresh Logic
+  const [pullY, setPullY] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleDrag = (_: any, info: any) => {
+    if (window.scrollY === 0 && info.offset.y > 0) {
+      setPullY(info.offset.y);
+    }
+  };
+
+  const handleDragEnd = async (_: any, info: any) => {
+    if (info.offset.y > 100 && window.scrollY === 0) {
+      setIsRefreshing(true);
+      await filesQuery.refetch();
+      setIsRefreshing(false);
+    }
+    setPullY(0);
+  };
 
   const [searchInput, setSearchInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -261,12 +282,52 @@ export default function Files() {
     navigate("/login", { replace: true });
   };
 
+  const handleDownload = (fileUrl: string, fileName: string) => {
+    if (!user || (user.verificationStatus !== "VERIFIED" && !user.isAdmin)) return;
+    
+    const backendUrl = import.meta.env.VITE_API_URL || "http://localhost:4001";
+    const absoluteUrl = fileUrl.startsWith('http') ? fileUrl : `${backendUrl}${fileUrl}`;
+    
+    try {
+      const link = document.createElement("a");
+      link.href = absoluteUrl;
+      link.setAttribute("download", fileName);
+      link.setAttribute("target", "_blank");
+      link.setAttribute("rel", "noopener noreferrer");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch {
+      window.open(absoluteUrl, "_blank");
+    }
+  };
+
   if (!user) return null;
 
   const isFemale = genderTheme === 'female';
 
   return (
-    <div className={`min-h-screen transition-colors duration-500 overflow-x-hidden bg-background text-foreground`}>
+    <motion.div 
+      drag="y"
+      dragConstraints={{ top: 0, bottom: 0 }}
+      onDrag={handleDrag}
+      onDragEnd={handleDragEnd}
+      className={`min-h-screen transition-colors duration-500 overflow-x-hidden bg-background text-foreground`}
+    >
+      <AnimatePresence>
+        {(pullY > 20 || isRefreshing) && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 80 }}
+            exit={{ opacity: 0, height: 0 }}
+            className="flex items-center justify-center overflow-hidden"
+          >
+            <div className={`p-3 rounded-full shadow-2xl ${isFemale ? 'bg-pink-500 text-white' : 'bg-blue-600 text-white'}`}>
+              <Loader2 className={`h-6 w-6 animate-spin`} />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       <DoorTransition isVisible={showDoor} />
       {isFemale && <PinkGarden3D />}
 
@@ -354,9 +415,26 @@ export default function Files() {
 
         {/* Files Grid */}
         {(filesQuery.isLoading || favoritesQuery.isLoading) ? (
-          <div className="flex flex-col justify-center items-center py-32 gap-4">
-            <Loader2 className={`h-16 w-16 animate-spin opacity-20 ${isFemale ? 'text-pink-500' : 'text-primary'}`} />
-            <p className="font-black text-muted-foreground text-xs uppercase tracking-widest">جاري جلب الأرشيف...</p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="winzo-card h-[350px] p-8 flex flex-col justify-between animate-pulse">
+                <div className="flex justify-between items-start">
+                  <div className="w-16 h-16 bg-muted/20 rounded-2xl"></div>
+                  <div className="flex gap-2">
+                    <div className="w-10 h-10 bg-muted/20 rounded-xl"></div>
+                    <div className="w-10 h-10 bg-muted/20 rounded-xl"></div>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div className="h-6 w-3/4 bg-muted/20 rounded-full"></div>
+                  <div className="h-4 w-1/2 bg-muted/20 rounded-full"></div>
+                </div>
+                <div className="flex gap-3 mt-8">
+                  <div className="h-14 flex-1 bg-muted/20 rounded-2xl"></div>
+                  <div className="h-14 flex-1 bg-muted/20 rounded-2xl"></div>
+                </div>
+              </div>
+            ))}
           </div>
         ) : filteredFiles.length === 0 ? (
           <EmptyState />
@@ -370,8 +448,7 @@ export default function Files() {
               return (
                 <Card
                   key={file.id}
-                  asChild
-                  className={`backdrop-blur-3xl bg-card/60 border transition-all duration-500 p-8 rounded-[3.5rem] group relative overflow-hidden shadow-xl ${
+                  className={`winzo-card p-8 group relative overflow-hidden ${
                       isFemale ? 'border-pink-500/20 hover:border-pink-500/40' : 'border-border/50 hover:border-primary/40'
                   }`}
                 >
@@ -450,6 +527,12 @@ export default function Files() {
                       <div className={`flex items-center gap-2 px-3 py-1 rounded-xl border ${
                           isFemale ? 'bg-pink-50 text-pink-800 border-pink-100' : 'bg-primary/5 text-primary border-primary/10'
                       }`}>
+                        <DownloadIcon size={14} className="opacity-60" />
+                        <span className="text-[10px] font-black">{file.downloads || 0}</span>
+                      </div>
+                      <div className={`flex items-center gap-2 px-3 py-1 rounded-xl border ${
+                          isFemale ? 'bg-pink-50 text-pink-800 border-pink-100' : 'bg-primary/5 text-primary border-primary/10'
+                      }`}>
                         <Calendar size={14} className="opacity-60" />
                         <span className="text-[10px] font-black">{file.year}</span>
                       </div>
@@ -462,44 +545,67 @@ export default function Files() {
                     </div>
                   </div>
 
-                  <div className="flex gap-3">
-                    <Button
-                      onClick={() => {
-                        setPreviewFile(file);
-                        incrementViewsMutation.mutate({ fileId: file.id });
-                      }}
-                      variant="outline"
-                      className={`flex-1 h-14 rounded-2xl font-black text-sm gap-2 border-2 transition-all hover:scale-[1.02] active:scale-[0.98] ${
-                        isFemale ? 'border-pink-200 text-pink-600 hover:bg-pink-50' : 'border-primary/20 text-primary hover:bg-primary/5'
-                      }`}
-                    >
-                      <Eye size={20} strokeWidth={2.5} />
-                      معاينة
-                    </Button>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="flex-1">
-                            <Button
-                              onClick={() => handleDownload(file.fileUrl, file.fileName)}
-                              disabled={user.verificationStatus !== 'VERIFIED' && !user.isAdmin}
-                              className={`w-full h-14 rounded-2xl font-black text-sm gap-2 shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98] ${
-                                isFemale ? 'bg-pink-600 text-white shadow-pink-500/20' : 'bg-primary text-primary-foreground shadow-primary/20'
-                              }`}
-                            >
-                              <Download size={20} strokeWidth={2.5} />
-                              تنزيل
-                            </Button>
-                          </div>
-                        </TooltipTrigger>
-                        {user.verificationStatus !== 'VERIFIED' && !user.isAdmin && (
-                          <TooltipContent className="font-black text-[10px] bg-yellow-500 text-white border-none shadow-xl">
-                            سيتم تفعيل هذه الميزة فور اعتماد حسابك من قبل الإدارة
-                          </TooltipContent>
-                        )}
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
+                    <div className="flex gap-3">
+                      <a
+                        href={(() => {
+                          const backendUrl = import.meta.env.VITE_API_URL || "http://localhost:4001";
+                          return file.fileUrl.startsWith('http') 
+                            ? file.fileUrl.replace(/^http:\/\/localhost:\d+/, backendUrl)
+                            : `${backendUrl}${file.fileUrl}`;
+                        })()}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => {
+                          incrementViewsMutation.mutate({ fileId: file.id });
+                        }}
+                        className={`flex-1 h-14 rounded-2xl font-black text-sm gap-2 border-2 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center no-underline ${
+                          isFemale ? 'border-pink-200 text-pink-600 hover:bg-pink-50' : 'border-primary/20 text-primary hover:bg-primary/5'
+                        }`}
+                      >
+                        <Eye size={20} strokeWidth={2.5} />
+                        معاينة
+                      </a>
+                      
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex-1">
+                              <a
+                                href={(() => {
+                                  const backendUrl = import.meta.env.VITE_API_URL || "http://localhost:4001";
+                                  return file.fileUrl.startsWith('http') 
+                                    ? file.fileUrl.replace(/^http:\/\/localhost:\d+/, backendUrl)
+                                    : `${backendUrl}${file.fileUrl}`;
+                                })()}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                download={file.fileName}
+                                onClick={(e) => {
+                                  if (user.verificationStatus !== 'VERIFIED' && !user.isAdmin) {
+                                    e.preventDefault();
+                                    return;
+                                  }
+                                  downloadMutation.mutate({ fileId: file.id });
+                                }}
+                                className={`w-full h-14 rounded-2xl font-black text-sm gap-2 shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center no-underline ${
+                                  user.verificationStatus !== 'VERIFIED' && !user.isAdmin ? 'opacity-50 pointer-events-none' : ''
+                                } ${
+                                  isFemale ? 'bg-pink-600 text-white shadow-pink-500/20' : 'bg-primary text-primary-foreground shadow-primary/20'
+                                }`}
+                              >
+                                <Download size={20} strokeWidth={2.5} />
+                                تنزيل
+                              </a>
+                            </div>
+                          </TooltipTrigger>
+                          {user.verificationStatus !== 'VERIFIED' && !user.isAdmin && (
+                            <TooltipContent className="font-black text-[10px] bg-yellow-500 text-white border-none shadow-xl">
+                              سيتم تفعيل هذه الميزة فور اعتماد حسابك من قبل الإدارة
+                            </TooltipContent>
+                          )}
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
 
                   <div className="mt-6 pt-6 border-t border-border/50 flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -581,6 +687,6 @@ export default function Files() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </motion.div>
   );
 }

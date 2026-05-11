@@ -17,7 +17,9 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 }
 
 export function generateToken(studentID: string, studentDbId: number | string, role: string = 'student', expiresIn: string = "180d"): string {
-  return jwt.sign({ studentID, studentDbId, role }, JWT_SECRET_SAFE, { expiresIn });
+  return jwt.sign({ studentID, studentDbId, role }, JWT_SECRET_SAFE, {
+    expiresIn,
+  } as jwt.SignOptions);
 }
 
 export function verifyToken(

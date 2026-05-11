@@ -20,7 +20,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { COURSES_BY_SEMESTER } from "@/lib/academicData";
 
 export default function Onboarding() {
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   const { user, refresh } = useAuth({ redirectOnUnauthenticated: true });
   const [selectedCourses, setSelectedCourses] = useState<string[]>(() => {
     if (!user?.enrolledCourses) return [];
@@ -35,22 +35,21 @@ export default function Onboarding() {
   const [activeSemester, setActiveSemester] = useState(COURSES_BY_SEMESTER[0].semester);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isResetOpen, setIsResetOpen] = useState(false);
-  const locationPath = location;
 
-  const saveMutation = trpc.students.completeOnboarding.useMutation({
+  const saveMutation = trpc.auth.completeOnboarding.useMutation({
     onSuccess: async () => {
       await refresh();
       toast.success("تم تحديث موادك بنجاح!");
-      if (locationPath === "/onboarding") {
+      if (location === "/onboarding") {
         navigate("/files", { replace: true });
       }
     },
     onError: (err) => {
-      toast.error(err.message || "فشل حفظ المواد");
+      toast.error(err.message);
     }
   });
 
-  const resetMutation = trpc.students.resetSemester.useMutation({
+  const resetMutation = trpc.auth.resetSemester.useMutation({
     onSuccess: async () => {
       await refresh();
       setSelectedCourses([]);
@@ -59,7 +58,7 @@ export default function Onboarding() {
       navigate("/onboarding", { replace: true });
     },
     onError: (err) => {
-      toast.error(err.message || "فشل تصفير الفصل");
+      toast.error(err.message);
     }
   });
 

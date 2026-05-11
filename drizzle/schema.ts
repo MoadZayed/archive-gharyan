@@ -76,6 +76,7 @@ export const academicFiles = mysqlTable("academicFiles", {
   academicYear: varchar("academicYear", { length: 20 }),
   mimeType: varchar("mimeType", { length: 100 }).notNull(),
   views: int("views").default(0).notNull(),
+  downloads: int("downloads").default(0).notNull(),
   isApproved: boolean("isApproved").default(false).notNull(),
   reportsCount: int("reportsCount").default(0).notNull(),
   deletedAt: timestamp("deletedAt"),

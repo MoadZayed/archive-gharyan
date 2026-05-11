@@ -15,7 +15,7 @@ export default function AdminProtectedRoute({ children }: AdminProtectedRoutePro
     if (!loading) {
       if (!user) {
         navigate("/admin-login", { replace: true });
-      } else if (!user.isAdmin) {
+      } else if (user.role !== 'admin' && !user.isAdmin) {
         // Logged in but not an admin
         navigate("/", { replace: true });
       }
@@ -33,7 +33,7 @@ export default function AdminProtectedRoute({ children }: AdminProtectedRoutePro
     );
   }
 
-  if (!user || !user.isAdmin) {
+  if (!user || (user.role !== 'admin' && !user.isAdmin)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#050506] text-white">
         <div className="flex flex-col items-center gap-4 text-center p-8">

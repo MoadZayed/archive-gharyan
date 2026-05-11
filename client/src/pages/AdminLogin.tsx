@@ -10,8 +10,11 @@ import { ShieldCheck, Loader2, Lock, User, Eye, EyeOff } from "lucide-react";
 import { motion } from "framer-motion";
 import Footer from "@/components/Footer";
 import Logo from "@/components/Logo";
+import { useGender } from "@/contexts/GenderContext";
 
 export default function AdminLogin() {
+  const { genderTheme } = useGender();
+  const isFemale = genderTheme === 'female';
   const [, navigate] = useLocation();
   const { login } = useAuth();
   
@@ -39,10 +42,16 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-[#050506] flex flex-col items-center justify-center p-4 pb-20 selection:bg-violet-500/30">
+    <div className={`min-h-screen flex flex-col items-center justify-center p-4 pb-20 selection:bg-blue-500/30 ${
+      isFemale ? 'bg-pink-50 dark:bg-[#1a050d]' : 'bg-slate-50 dark:bg-[#020617]'
+    }`}>
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] bg-violet-600/10 rounded-full blur-[120px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] bg-indigo-600/5 rounded-full blur-[120px]" />
+        <div className={`absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full blur-[120px] ${
+          isFemale ? 'bg-pink-400/20 dark:bg-pink-600/10' : 'bg-blue-400/20 dark:bg-blue-600/10'
+        }`} />
+        <div className={`absolute bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] rounded-full blur-[120px] ${
+          isFemale ? 'bg-rose-400/10 dark:bg-rose-600/5' : 'bg-indigo-400/10 dark:bg-indigo-600/5'
+        }`} />
       </div>
       
       <motion.div
@@ -51,47 +60,67 @@ export default function AdminLogin() {
         transition={{ type: "spring", duration: 0.8 }}
         className="w-full max-w-sm z-10 mb-8"
       >
-        <Card className="bg-black/60 backdrop-blur-3xl border-white/5 p-10 rounded-[3rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] border-t-white/10">
+        <Card className={`backdrop-blur-3xl p-10 rounded-[3rem] shadow-2xl ${
+          isFemale 
+            ? 'bg-white/60 dark:bg-black/60 border-pink-200 dark:border-pink-800 shadow-pink-500/10' 
+            : 'bg-white/60 dark:bg-black/60 border-blue-200 dark:border-blue-800 shadow-blue-500/10'
+        }`}>
           <div className="flex flex-col items-center mb-12">
             <Logo className="scale-125 mb-4" />
-            <h1 className="text-2xl font-black text-white tracking-tighter mb-2">النظام المركزي</h1>
-            <div className="flex items-center gap-2 px-4 py-1 bg-violet-500/10 rounded-full border border-violet-500/20">
-              <span className="h-1.5 w-1.5 rounded-full bg-violet-500 animate-pulse" />
-              <p className="text-[9px] font-black text-violet-400 uppercase tracking-[0.25em]">Admin Portal v2.0</p>
+            <h1 className={`text-2xl font-black tracking-tighter mb-2 ${isFemale ? 'text-pink-900 dark:text-pink-100' : 'text-blue-900 dark:text-blue-100'}`}>النظام المركزي</h1>
+            <div className={`flex items-center gap-2 px-4 py-1 rounded-full border ${
+              isFemale ? 'bg-pink-100 dark:bg-pink-500/10 border-pink-200 dark:border-pink-500/20' : 'bg-blue-100 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/20'
+            }`}>
+              <span className={`h-1.5 w-1.5 rounded-full animate-pulse ${isFemale ? 'bg-pink-500' : 'bg-blue-500'}`} />
+              <p className={`text-[9px] font-black uppercase tracking-[0.25em] ${isFemale ? 'text-pink-600 dark:text-pink-400' : 'text-blue-600 dark:text-blue-400'}`}>Admin Portal v2.0</p>
             </div>
           </div>
 
           <form onSubmit={handleAdminLogin} className="space-y-8">
             <div className="space-y-3">
-              <label className="text-[10px] font-black text-white/40 px-3 uppercase tracking-widest">اسم مدير النظام</label>
+              <label className={`text-[10px] font-black px-3 uppercase tracking-widest ${isFemale ? 'text-pink-600 dark:text-pink-400' : 'text-blue-600 dark:text-blue-400'}`}>اسم مدير النظام</label>
               <div className="relative group">
-                <User className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20 group-focus-within:text-violet-500 transition-colors" />
+                <User className={`absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 transition-colors ${
+                  isFemale ? 'text-pink-400 dark:text-pink-600 group-focus-within:text-pink-500' : 'text-blue-400 dark:text-blue-600 group-focus-within:text-blue-500'
+                }`} />
                 <Input 
                   value={username} 
                   onChange={(e) => setUsername(e.target.value)} 
                   placeholder="Username" 
-                  className="bg-white/[0.02] border-white/5 h-14 rounded-2xl font-bold pr-12 text-white focus:border-violet-500/40 transition-all outline-none focus:ring-4 focus:ring-violet-500/5" 
+                  className={`h-14 rounded-2xl font-bold pr-12 transition-all outline-none ${
+                    isFemale 
+                      ? 'bg-white border-pink-200 dark:bg-slate-800 dark:border-pink-800 text-pink-900 dark:text-pink-100 placeholder:text-pink-300 dark:placeholder:text-pink-600 focus:ring-pink-400' 
+                      : 'bg-white border-blue-200 dark:bg-slate-800 dark:border-blue-800 text-blue-900 dark:text-blue-100 placeholder:text-blue-300 dark:placeholder:text-blue-600 focus:ring-blue-500'
+                  }`} 
                   required 
                 />
               </div>
             </div>
 
             <div className="space-y-3">
-              <label className="text-[10px] font-black text-white/40 px-3 uppercase tracking-widest">كلمة المرور المشفرة</label>
+              <label className={`text-[10px] font-black px-3 uppercase tracking-widest ${isFemale ? 'text-pink-600 dark:text-pink-400' : 'text-blue-600 dark:text-blue-400'}`}>كلمة المرور المشفرة</label>
               <div className="relative group">
-                <Lock className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20 group-focus-within:text-violet-500 transition-colors" />
+                <Lock className={`absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 transition-colors ${
+                  isFemale ? 'text-pink-400 dark:text-pink-600 group-focus-within:text-pink-500' : 'text-blue-400 dark:text-blue-600 group-focus-within:text-blue-500'
+                }`} />
                 <Input 
                   type={showPassword ? "text" : "password"}
                   value={password} 
                   onChange={(e) => setPassword(e.target.value)} 
                   placeholder="••••••••" 
-                  className="bg-white/[0.02] border-white/5 h-14 rounded-2xl font-bold pr-12 pl-12 text-white focus:border-violet-500/40 transition-all outline-none focus:ring-4 focus:ring-violet-500/5" 
+                  className={`h-14 rounded-2xl font-bold pr-12 pl-12 transition-all outline-none ${
+                    isFemale 
+                      ? 'bg-white border-pink-200 dark:bg-slate-800 dark:border-pink-800 text-pink-900 dark:text-pink-100 placeholder:text-pink-300 dark:placeholder:text-pink-600 focus:ring-pink-400' 
+                      : 'bg-white border-blue-200 dark:bg-slate-800 dark:border-blue-800 text-blue-900 dark:text-blue-100 placeholder:text-blue-300 dark:placeholder:text-blue-600 focus:ring-blue-500'
+                  }`} 
                   required 
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-white/50 transition-colors"
+                  className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${
+                    isFemale ? 'text-pink-400 dark:text-pink-600 hover:text-pink-500' : 'text-blue-400 dark:text-blue-600 hover:text-blue-500'
+                  }`}
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -101,7 +130,9 @@ export default function AdminLogin() {
             <Button 
               type="submit" 
               disabled={loginMutation.isPending} 
-              className="w-full h-16 bg-white text-black hover:bg-white/90 font-black rounded-2xl shadow-2xl transition-all active:scale-95 text-lg"
+              className={`w-full h-14 font-black text-lg rounded-2xl shadow-xl transition-all hover:scale-[1.02] active:scale-95 border-0 ${
+                isFemale ? 'bg-pink-500 hover:bg-pink-600 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'
+              }`}
             >
               {loginMutation.isPending ? <Loader2 className="animate-spin h-6 w-6" /> : "دخول المنطقة المحظورة"}
             </Button>
@@ -111,7 +142,9 @@ export default function AdminLogin() {
             <button 
               type="button" 
               onClick={() => navigate("/")} 
-              className="text-[10px] font-black text-white/20 hover:text-white/50 transition-colors uppercase tracking-[0.3em] flex items-center justify-center gap-2 mx-auto"
+              className={`text-[10px] font-black transition-colors uppercase tracking-[0.3em] flex items-center justify-center gap-2 mx-auto ${
+                isFemale ? 'text-pink-500/50 hover:text-pink-500' : 'text-blue-500/50 hover:text-blue-500'
+              }`}
             >
               <span>←</span>
               الرجوع للواجهة العامة

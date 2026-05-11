@@ -179,7 +179,7 @@ function DashboardLayoutContent({
                   </span>
                 </div>
               ) : null}
-            </div>
+            </nav>
           </SidebarHeader>
 
           <SidebarContent className="gap-0">

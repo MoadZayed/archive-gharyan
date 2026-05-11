@@ -20,11 +20,14 @@ export default function Footer() {
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
         
         {/* 2. Contrast Fix for Footer Text */}
-        <div className={`text-[9px] font-black uppercase tracking-[0.3em] order-2 md:order-1 transition-colors ${
-          isFemale ? 'text-pink-900/60' : 'text-slate-900 dark:text-slate-200'
-        }`}>
-          Academic Archive Portal System v1.0
-        </div>
+        <button 
+          onClick={() => window.location.href = "/admin-login"}
+          className={`text-[9px] font-black uppercase tracking-[0.3em] order-2 md:order-1 transition-all opacity-40 hover:opacity-100 cursor-pointer ${
+            isFemale ? 'text-pink-900/60' : 'text-slate-900 dark:text-slate-200'
+          }`}
+        >
+          Academic Archive Portal System v1.0 🛡️
+        </button>
 
         <div className={`text-[9px] font-black uppercase tracking-[0.2em] order-3 md:order-2 transition-colors ${
           isFemale ? 'text-pink-700' : 'text-slate-900 dark:text-slate-200'

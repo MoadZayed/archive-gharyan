@@ -211,7 +211,8 @@ html, body {
   }
   body {
     /* stylelint-disable-next-line */
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
@@ -232,8 +233,8 @@ html, body {
     width: 100%;
     margin-left: auto;
     margin-right: auto;
-    padding-left: 1rem;
-    padding-right: 1rem;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
   }
 
   .flex {
@@ -241,21 +242,15 @@ html, body {
     min-width: 0;
   }
 
-  @media (min-width: 640px) {
-    .container {
-      padding-left: 1.5rem;
-      padding-right: 1.5rem;
-    }
-  }
-
   @media (min-width: 1024px) {
     .container {
-      padding-left: 2rem;
-      padding-right: 2rem;
-      max-width: 1280px;
+      padding-left: 3rem;
+      padding-right: 3rem;
+      max-width: 1440px;
     }
   }
 }
+
 @layer base {
   html, body, #root {
     width: 100%;
@@ -265,14 +260,16 @@ html, body {
     overflow-x: hidden;
   }
 }
+
 html, body, #root {
   width: 100%;
   height: 100%;
   margin: 0;
-  line-height: 1.6; /* CTO Standard: Prevents text overlap */
-  letter-spacing: -0.01em; /* Modern academic look */
+  font-family: 'Cairo', 'Outfit', sans-serif;
+  line-height: 1.8; /* Academic Spacing: Enhanced for readability */
+  letter-spacing: -0.02em; /* Modern academic look */
   overscroll-behavior-y: contain; /* PWA: Native app feel, prevents default bounce */
-  @apply transition-colors duration-500 ease-in-out; /* Smooth Winzo Transition */
+  @apply transition-colors duration-700 ease-in-out; /* Ultra-Smooth Winzo Transition */
 }
 
 /* Winzo Luxury Utilities */
@@ -282,11 +279,22 @@ html, body, #root {
 }
 
 .winzo-card {
-  @apply backdrop-blur-3xl bg-card/60 border border-border/50 rounded-[2.5rem] shadow-2xl transition-all duration-500;
+  @apply backdrop-blur-[50px] bg-white/40 dark:bg-black/40 border border-white/20 dark:border-white/10 rounded-[2.5rem] shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] transition-all duration-700 hover:shadow-[0_16px_48px_0_rgba(31,38,135,0.15)] hover:-translate-y-1;
 }
 
 .academic-spacing {
-  @apply space-y-10 md:space-y-16;
+  @apply space-y-12 md:space-y-24; /* Massive White Space for Visual Comfort */
+}
+
+/* High Contrast Academic Typography */
+h1, h2, h3, h4, h5, h6 {
+  @apply font-black tracking-tight leading-tight;
+  margin-bottom: 1.5rem;
+}
+
+.subtitle-academic {
+  @apply text-muted-foreground font-semibold tracking-wide opacity-90;
+  line-height: 2;
 }
 
 /* Custom Scrollbar Styling - Global and Modal Lists */
@@ -294,11 +302,11 @@ html, body, #root {
   overflow-y: auto !important;
   max-height: 300px !important;
   scrollbar-width: thin;
-  scrollbar-color: rgba(100, 100, 100, 0.3) transparent;
+  scrollbar-color: hsl(var(--primary)) transparent;
 }
 
 .custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
+  width: 5px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
@@ -306,15 +314,25 @@ html, body, #root {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: rgba(100, 100, 100, 0.3);
-  border-radius: 10px;
+  background-color: hsl(var(--primary) / 0.3);
+  border-radius: 100px;
 }
 
 .dark .custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: hsl(var(--primary) / 0.5);
 }
 
 .dark .glow-text {
   color: white !important;
   text-shadow: 0 0 12px rgba(255, 255, 255, 0.8), 0 0 20px rgba(255, 255, 255, 0.4);
+}
+
+/* Glassmorphism Navigation */
+.nav-glass {
+  @apply sticky top-0 z-50 backdrop-blur-2xl bg-background/70 border-b border-border/50;
+}
+
+/* Responsive Smart Buttons */
+.btn-smart {
+  @apply flex flex-col sm:flex-row items-center justify-center gap-4 w-full sm:w-auto;
 }

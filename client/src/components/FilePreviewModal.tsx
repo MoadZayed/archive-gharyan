@@ -1,5 +1,9 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/button";
-import { Dialog as ShadcnDialog, DialogContent as ShadcnDialogContent, DialogHeader as ShadcnDialogHeader, DialogTitle as ShadcnDialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog as ShadcnDialog,
+  DialogContent as ShadcnDialogContent,
+  DialogHeader as ShadcnDialogHeader,
+  DialogTitle as ShadcnDialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Download, Eye, FileWarning, Maximize2, ZoomIn, ZoomOut } from "lucide-react";
 import { useState } from "react";
@@ -28,6 +32,12 @@ export default function FilePreviewModal({ isOpen, onClose, file, onDownload }: 
   const isPdf = file.mimeType === "application/pdf";
   const canPreview = isImage || isPdf;
 
+  // ✅ Construct absolute URL (Fixed instructions point 2 & 3)
+  const backendUrl = import.meta.env.VITE_API_URL || "http://localhost:4001";
+  const absoluteUrl = file.fileUrl.startsWith('http') 
+    ? file.fileUrl 
+    : `${backendUrl}${file.fileUrl}`;
+
   return (
     <ShadcnDialog open={isOpen} onOpenChange={onClose}>
       <ShadcnDialogContent className="max-w-5xl w-[95vw] h-[90vh] flex flex-col p-0 overflow-hidden border-none bg-background/95 backdrop-blur-xl">
@@ -55,14 +65,14 @@ export default function FilePreviewModal({ isOpen, onClose, file, onDownload }: 
           {isImage ? (
             <div className="relative transition-transform duration-200 ease-out" style={{ transform: `scale(${zoom})` }}>
               <img 
-                src={file.fileUrl} 
+                src={absoluteUrl} 
                 alt={file.fileName} 
                 className="max-w-full max-h-full rounded-lg shadow-2xl"
               />
             </div>
           ) : isPdf ? (
             <iframe 
-              src={`${file.fileUrl}#toolbar=1&navpanes=0&scrollbar=1`} 
+              src={`${absoluteUrl}#toolbar=1&navpanes=0&scrollbar=1`} 
               className="w-full h-full rounded-lg border shadow-inner bg-white"
               title={file.fileName}
             />

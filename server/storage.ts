@@ -2,8 +2,8 @@ import fs from "fs/promises";
 import path from "path";
 import crypto from "crypto";
 
-// مسار المجلد الذي سيتم حفظ الملفات فيه (داخل مجلد public/uploads)
-const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads");
+// مسار المجلد الذي سيتم حفظ الملفات فيه (المجلد الرئيسي uploads)
+const UPLOAD_DIR = path.join(process.cwd(), "uploads");
 
 // دالة للتأكد من إنشاء المجلد إذا لم يكن موجوداً
 async function ensureUploadDir(subPath = "") {

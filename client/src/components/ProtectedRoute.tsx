@@ -4,7 +4,7 @@ import { useEffect, ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, isLoading } = useAuth();
+  const { user, loading: isLoading } = useAuth();
   const [location, navigate] = useLocation();
 
   if (isLoading) {

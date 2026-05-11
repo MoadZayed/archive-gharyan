@@ -28,7 +28,7 @@ export default function Register() {
   const [securityQuestion, setSecurityQuestion] = useState("");
   const [securityAnswer, setSecurityAnswer] = useState("");
   const [role, setRole] = useState<"student" | "professor">("student");
-  const [error, setError] = useState("");
+
   const [isTermsOpen, setIsTermsOpen] = useState(false);
 
   const registerMutation = trpc.auth.register.useMutation({
@@ -36,13 +36,18 @@ export default function Register() {
       await login(data.token);
       toast.success(t("register_success") || "تم إنشاء الحساب بنجاح!");
       navigate("/onboarding", { replace: true });
+    onError: (err) => {
+      if (err.data?.code === "CONFLICT") {
+        toast.error("رقم القيد مسجل مسبقاً");
+      } else {
+        toast.error(err.message || "فشل إنشاء الحساب، يرجى المحاولة لاحقاً");
+      }
     },
-    onError: (err) => setError(err.message || t("error_register")),
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+
     registerMutation.mutate({ studentID, fullName, email, password, securityQuestion, securityAnswer, role });
   };
 

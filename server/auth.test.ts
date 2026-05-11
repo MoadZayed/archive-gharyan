@@ -8,31 +8,33 @@ import {
 
 describe("Authentication", () => {
   describe("Password hashing", () => {
-    it("should hash a password", () => {
+    it("should hash a password", async () => {
       const password = "test123";
-      const hash = hashPassword(password);
+      const hash = await hashPassword(password);
       expect(hash).toBeDefined();
       expect(hash).not.toBe(password);
     });
 
-    it("should verify a correct password", () => {
+    it("should verify a correct password", async () => {
       const password = "test123";
-      const hash = hashPassword(password);
-      expect(verifyPassword(password, hash)).toBe(true);
+      const hash = await hashPassword(password);
+      expect(await verifyPassword(password, hash)).toBe(true);
     });
 
-    it("should reject an incorrect password", () => {
+    it("should reject an incorrect password", async () => {
       const password = "test123";
       const wrongPassword = "wrong123";
-      const hash = hashPassword(password);
-      expect(verifyPassword(wrongPassword, hash)).toBe(false);
+      const hash = await hashPassword(password);
+      expect(await verifyPassword(wrongPassword, hash)).toBe(false);
     });
 
-    it("should produce consistent hashes", () => {
+    it("should produce different salts per hash", async () => {
       const password = "test123";
-      const hash1 = hashPassword(password);
-      const hash2 = hashPassword(password);
-      expect(hash1).toBe(hash2);
+      const hash1 = await hashPassword(password);
+      const hash2 = await hashPassword(password);
+      expect(hash1).not.toBe(hash2);
+      expect(await verifyPassword(password, hash1)).toBe(true);
+      expect(await verifyPassword(password, hash2)).toBe(true);
     });
   });
 
@@ -60,8 +62,6 @@ describe("Authentication", () => {
     });
 
     it("should reject an expired token", () => {
-      // This test would require manipulating the JWT expiration
-      // For now, we just verify that invalid tokens return null
       const decoded = verifyToken("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.invalid.signature");
       expect(decoded).toBeNull();
     });

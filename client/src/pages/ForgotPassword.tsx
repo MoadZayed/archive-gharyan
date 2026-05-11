@@ -36,7 +36,7 @@ export default function ForgotPassword() {
       navigate("/login");
     },
     onError: (err) => {
-      toast.error(err.message || "فشل تحديث كلمة المرور");
+      toast.error(err.message);
     },
   });
 

@@ -235,22 +235,24 @@ export default function Home() {
           transition={{ duration: 0.8 }}
           className="space-y-6"
         >
-          <h1 className={`text-6xl md:text-[7.5rem] font-black leading-[1.05] tracking-tighter select-none pb-8 ${isFemaleVibe ? 'text-foreground' : 'text-white'}`}>
+          <h1 className={`text-6xl md:text-[8rem] font-black leading-[1] tracking-tighter select-none pb-12 ${isFemaleVibe ? 'text-foreground' : 'text-white'}`}>
             مش مجرد منصة قراية..<br />
             <span className={`text-transparent bg-clip-text bg-gradient-to-r ${
               isFemaleVibe 
-                ? 'from-pink-600 via-purple-600 to-indigo-600' 
+                ? 'from-pink-600 via-rose-600 to-purple-600' 
                 : 'from-blue-500 via-indigo-500 to-purple-500'
             }`}>
               هني مجتمعك الأكاديمي<br />اللي يجمعنا
             </span>
           </h1>
 
-          <p className={`text-lg md:text-2xl font-bold mt-16 transition-colors duration-1000 tracking-[0.2em] uppercase ${
-            isFemaleVibe ? 'text-foreground' : 'text-white/80'
-          }`}>
-            كلية تقنية المعلومات - غريان
-          </p>
+          <div className="py-20">
+            <p className={`text-xl md:text-3xl font-black transition-colors duration-1000 tracking-[0.3em] uppercase drop-shadow-sm ${
+              isFemaleVibe ? 'text-pink-900' : 'text-white'
+            }`}>
+              كلية تقنية المعلومات - غريان
+            </p>
+          </div>
 
           <div className="pt-16 flex flex-col sm:flex-row gap-6 justify-center items-center">
             <motion.button

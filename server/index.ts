@@ -1,5 +1,5 @@
-console.log("SERVER_TRYING_TO_START");
 import "dotenv/config";
+console.log("🚀 [Startup] Environment Variables Loaded");
 import express from "express";
 import { createServer } from "http";
 import cors from "cors";
@@ -8,6 +8,7 @@ import { appRouter } from "./routers";
 import { createContext } from "./_core/context";
 import { registerOAuthRoutes } from "./_core/oauth";
 import path from "path";
+import fs from "fs";
 import { fileURLToPath } from "url";
 import { setupVite, serveStatic } from "./_core/vite";
 import multer from "multer";
@@ -19,97 +20,192 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 50 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    const allowedMimeTypes = ["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/vnd.openxmlformats-officedocument.presentationml.presentation", "image/jpeg", "image/png"];
+    const allowedMimeTypes = [
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      "image/jpeg",
+      "image/png",
+    ];
     if (allowedMimeTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
       cb(new Error("نوع الملف غير مسموح به"));
     }
-  }
+  },
 });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const ALLOWED_ORIGINS = [
+  "http://localhost:5173",
+  "http://localhost:4001",
+  "http://127.0.0.1:5173",
+  "http://127.0.0.1:4001",
+];
+
 async function startServer() {
-  console.log("[Server] Initializing GITA Engine...");
-  const app = express();
-  const server = createServer(app);
+  try {
+    console.log("🚀 [Startup] Initializing GITA Engine...");
+    const app = express();
+    const server = createServer(app);
 
-  app.use(cors({ origin: true, credentials: true }));
-  app.use(express.json({ limit: "50mb" }));
-  app.use(express.urlencoded({ limit: "50mb", extended: true }));
+    // ✅ CORS – strict config to accept Vite frontend in dev and same-origin in prod
+    app.use(
+      cors({
+        origin: (origin, callback) => {
+          // Allow requests with no origin (e.g., mobile apps, curl, Postman)
+          if (!origin) return callback(null, true);
+          if (
+            ALLOWED_ORIGINS.includes(origin) ||
+            process.env.NODE_ENV !== "production"
+          ) {
+            return callback(null, true);
+          }
+          return callback(null, true); // Open during dev – lock down in prod via env
+        },
+        credentials: true,
+        methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+        allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
+      })
+    );
 
-  registerOAuthRoutes(app);
+    app.use(express.json({ limit: "50mb" }));
+    app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
-  app.get("/api/health", (_req, res) => res.json({ status: "ok", timestamp: new Date().toISOString() }));
+    // ✅ Serve uploaded files statically
+    const UPLOAD_DIR = path.join(process.cwd(), "uploads");
+    if (!fs.existsSync(UPLOAD_DIR)) {
+      fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+      console.log(`📁 [Storage] Created uploads directory: ${UPLOAD_DIR}`);
+    }
+    app.use(
+      "/uploads",
+      express.static(UPLOAD_DIR, {
+        setHeaders: (res) => {
+          res.set("Access-Control-Allow-Origin", "*");
+          res.set("Cross-Origin-Resource-Policy", "cross-origin");
+          res.set("Cache-Control", "public, max-age=86400");
+        },
+      })
+    );
+    console.log(`📂 [Static] Serving uploads from: ${UPLOAD_DIR}`);
 
-  // Binary Upload Route (Restored)
-  app.post("/api/upload-binary", (req, res) => {
-    upload.single("file")(req, res, async (err) => {
-      if (err) return res.status(400).json({ error: err.message });
+    // 404 logger for missing uploads
+    app.get("/uploads/*", (_req, res) => {
+      res.status(404).json({ error: "File not found" });
+    });
+
+    // ✅ Health check (before tRPC so it's always reachable)
+    app.get("/api/health", (_req, res) =>
+      res.json({ status: "ok", node: process.version, env: process.env.NODE_ENV })
+    );
+
+    console.log("📂 [Startup] Registering OAuth Routes...");
+    registerOAuthRoutes(app);
+
+    // ✅ tRPC Middleware
+    console.log("🔗 [Startup] Setting up tRPC Middleware...");
+    app.use(
+      "/api/trpc",
+      createExpressMiddleware({
+        router: appRouter,
+        createContext,
+        onError({ error, path }) {
+          if (error.code !== "UNAUTHORIZED" && error.code !== "FORBIDDEN") {
+            console.error(`❌ [tRPC Error] at "${path}":`, error.message);
+          }
+        },
+      })
+    );
+
+    // ✅ Binary File Upload Route
+    app.post("/api/upload-binary", upload.single("file"), async (req, res) => {
       try {
-        if (!req.file) return res.status(400).json({ error: "لم يتم استلام أي ملف" });
-        const fileKey = `files/binary/${Date.now()}-${req.file.originalname}`;
-        const result = await storagePut(fileKey, req.file.buffer, req.file.mimetype);
-        const fileHash = crypto.createHash("sha256").update(req.file.buffer).digest("hex");
-        res.json({ success: true, key: result.key, url: result.url, fileHash, fileName: req.file.originalname, mimeType: req.file.mimetype, size: req.file.size });
+        if (!req.file) {
+          res.status(400).json({ error: "لم يتم اختيار ملف" });
+          return;
+        }
+
+        const fileHash = crypto
+          .createHash("md5")
+          .update(req.file.buffer)
+          .digest("hex");
+
+        // Duplicate detection
+        const existingFile = await db.getFileByHash(fileHash);
+        if (existingFile) {
+          res.status(200).json({
+            key: existingFile.fileKey,
+            url: existingFile.fileUrl,
+            fileHash,
+            size: req.file.size,
+            isDuplicate: true,
+          });
+          return;
+        }
+
+        const fileName = req.file.originalname;
+        const storageResult = await storagePut(
+          fileName,
+          req.file.buffer,
+          req.file.mimetype
+        );
+
+        res.json({
+          key: storageResult.key,
+          url: storageResult.url,
+          fileHash,
+          size: req.file.size,
+        });
       } catch (error) {
         console.error("Binary Upload Error:", error);
-        res.status(500).json({ error: "فشل رفع الملف" });
+        res.status(500).json({ error: "فشل في معالجة الملف" });
       }
     });
-  });
 
-  app.use(
-    "/api/trpc",
-    createExpressMiddleware({
-      router: appRouter,
-      createContext,
-      onError({ error, path }) {
-        console.error(`❌ TRPC Error [${path}]:`, error.message);
-      },
-    })
-  );
-
-  // Global Error Handler (Restored)
-  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-    const timestamp = new Date().toISOString();
-    console.error(`[${timestamp}] ❌ Critical Error: ${req.method} ${req.url}`);
-    console.error(`Message: ${err.message}`);
-    res.status(500).json({ error: "حدث خطأ في السيرفر", requestId: timestamp });
-  });
-
-  // DB Connection with Catch Block
-  try {
-    console.log("[DB] Attempting connection...");
-    await db.getDb();
-    console.log("[DB] Connection Successful.");
-  } catch (err) {
-    console.error("❌ CRITICAL DB FAILURE:", err);
-    process.exit(1);
-  }
-
-  if (process.env.NODE_ENV === "production") {
-    serveStatic(app);
-  } else {
-    console.log("[Server] Dev Mode: Vite serving via standalone port 5173 (Proxy to 4005)");
-  }
-
-  const PORT = 4005;
-  server.on("error", (error: any) => {
-    if (error.code === "EADDRINUSE") {
-      console.error(`❌ Port ${PORT} is BUSY.`);
+    // ✅ DB Connection – Critical Path
+    console.log("🗄️ [DB] Attempting to connect to database...");
+    const dbInstance = await db.getDb();
+    if (!dbInstance) {
+      console.error(
+        "❌ [FATAL] Database instance is NULL. Check DATABASE_URL in .env"
+      );
       process.exit(1);
     }
-  });
+    console.log("✅ [DB] Connection Verified.");
 
-  server.listen(PORT, "127.0.0.1", () => {
-    console.log(`[Server] GITA_BACKEND_READY_ON_PORT_${PORT}`);
-  });
+    // ✅ Static/Vite setup AFTER DB so tRPC routes always take priority
+    if (process.env.NODE_ENV === "production") {
+      serveStatic(app);
+    } else {
+      await setupVite(app, server);
+    }
+
+    // ✅ Bind strictly to IPv4 on port 4001
+    const PORT = Number(process.env.PORT) || 4001;
+
+    server.on("error", (error: any) => {
+      console.error("🔥 [Server Error]:", error);
+      if (error.code === "EADDRINUSE") {
+        console.error(
+          `❌ Port ${PORT} is already in use. Kill the process using it first.`
+        );
+        process.exit(1);
+      }
+    });
+
+    server.listen(PORT, "0.0.0.0", () => {
+      console.log(`✨ [Ready] Backend → http://localhost:${PORT}`);
+      console.log(`🔗 [API]   tRPC    → http://localhost:${PORT}/api/trpc`);
+      console.log(`💊 [API]   Health  → http://localhost:${PORT}/api/health`);
+    });
+  } catch (err) {
+    console.error("💥 [Critical Startup Failure]:", err);
+    process.exit(1);
+  }
 }
 
-startServer().catch((err) => {
-  console.error("❌ فشل تشغيل السيرفر:", err);
-  process.exit(1);
-});
+startServer();

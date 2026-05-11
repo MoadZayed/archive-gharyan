@@ -1,7 +1,6 @@
 import express, { type Express } from "express";
 import fs from "fs";
 import { type Server } from "http";
-import { nanoid } from "nanoid";
 import path from "path";
 import { fileURLToPath } from "url";
 import { createServer as createViteServer } from "vite";
@@ -42,7 +41,7 @@ export async function setupVite(app: Express, server: Server) {
 
       template = template.replace(
         `src="/src/main.tsx"`,
-        `src="/src/main.tsx?v=${nanoid()}"`
+        `src="/src/main.tsx?v=${Math.random().toString(36).substring(7)}"`
       );
 
       const page = await vite.transformIndexHtml(url, template);

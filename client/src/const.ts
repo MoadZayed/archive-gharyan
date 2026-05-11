@@ -6,7 +6,7 @@ export const getLoginUrl = () => {
   const oauthPortalUrl = 
     import.meta.env.VITE_OAUTH_PORTAL_URL || 
     import.meta.env.VITE_OAUTH_SERVER_URL || 
-    "http://localhost:4000";
+    "http://localhost:4001";
     
   const appId = import.meta.env.VITE_APP_ID || "gharyan-it-college";
   

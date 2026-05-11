@@ -103,7 +103,11 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": {
-        target: "http://127.0.0.1:4005",
+        target: "http://localhost:4001",
+        changeOrigin: true,
+      },
+      "/uploads": {
+        target: "http://localhost:4001",
         changeOrigin: true,
       },
     },
