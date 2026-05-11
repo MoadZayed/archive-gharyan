@@ -44,6 +44,7 @@ const ALLOWED_ORIGINS = [
   "http://localhost:4001",
   "http://127.0.0.1:5173",
   "http://127.0.0.1:4001",
+  "https://archiveitgharyan-moadzayeds-projects.vercel.app"
 ];
 
 async function startServer() {
@@ -52,8 +53,8 @@ async function startServer() {
     const app = express();
     const server = createServer(app);
 
-    // ✅ CORS – strict config to accept Vite frontend in dev and same-origin in prod
-    app.use(cors({ origin: true, credentials: true }));
+    // ✅ CORS – strict config to accept Vite frontend in dev and Vercel in prod
+    app.use(cors({ origin: ALLOWED_ORIGINS, credentials: true }));
 
     app.use(express.json({ limit: "50mb" }));
     app.use(express.urlencoded({ limit: "50mb", extended: true }));
