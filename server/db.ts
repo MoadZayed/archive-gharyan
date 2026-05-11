@@ -674,13 +674,6 @@ export async function addNotification(data: InsertNotification) {
   return db.insert(notifications).values(data);
 }
 
-export async function incrementFileViews(fileId: number) {
-  const db = await getDb();
-  if (!db) return;
-  await db.update(academicFiles)
-    .set({ views: sql`${academicFiles.views} + 1` })
-    .where(eq(academicFiles.id, fileId));
-}
 
 export async function incrementFileDownloads(fileId: number) {
   const db = await getDb();
