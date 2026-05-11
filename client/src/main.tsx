@@ -53,10 +53,9 @@ queryClient.getMutationCache().subscribe((event) => {
   }
 });
 
-const apiBaseUrl = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
-const trpcUrl = apiBaseUrl.endsWith("/api/trpc")
-  ? apiBaseUrl
-  : `${apiBaseUrl}/api/trpc`;
+const trpcUrl = import.meta.env.PROD 
+  ? `${import.meta.env.VITE_API_URL}/api/trpc`
+  : 'http://localhost:4001/api/trpc';
 
 const trpcClient = trpc.createClient({
   links: [
