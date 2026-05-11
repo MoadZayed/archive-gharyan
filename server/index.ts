@@ -180,10 +180,10 @@ async function startServer() {
       }
     });
 
-    server.listen(PORT, "0.0.0.0", () => {
-      console.log(`✨ [Ready] Backend → http://localhost:${PORT}`);
-      console.log(`🔗 [API]   tRPC    → http://localhost:${PORT}/api/trpc`);
-      console.log(`💊 [API]   Health  → http://localhost:${PORT}/api/health`);
+    server.listen({ port: PORT, host: "0.0.0.0" }, () => {
+      console.log(`✨ [Ready] Backend → http://0.0.0.0:${PORT}`);
+      console.log(`🔗 [API]   tRPC    → http://0.0.0.0:${PORT}/api/trpc`);
+      console.log(`💊 [API]   Health  → http://0.0.0.0:${PORT}/api/health`);
     });
   } catch (err) {
     console.error("💥 [Critical Startup Failure]:", err);
