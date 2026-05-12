@@ -176,11 +176,11 @@ async function startServer() {
     }
     console.log("✅ [DB] Connection Verified.");
 
-    // ✅ Static/Vite setup AFTER DB so tRPC routes always take priority
-    if (process.env.NODE_ENV === "production") {
-      serveStatic(app);
-    } else {
+    // ✅ Static/Vite: API-only in production (frontend is on Vercel), Vite dev server in development
+    if (process.env.NODE_ENV !== "production") {
       await setupVite(app, server);
+    } else {
+      console.log("🚀 [Production] Running as API-only backend. Static serving is handled by Vercel.");
     }
 
     // ✅ Bind strictly to IPv4 on port 4001
