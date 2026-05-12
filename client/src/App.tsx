@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { GenderProvider } from "./contexts/GenderContext";
+import { Analytics } from "@vercel/analytics/react";
 import "./lib/i18n";
 
 
@@ -237,6 +238,7 @@ function App() {
             </div>
             <MobileBottomNav />
             <WhatsAppButton />
+            <Analytics />
           </TooltipProvider>
         </ThemeProvider>
       </GenderProvider>
