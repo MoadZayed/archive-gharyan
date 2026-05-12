@@ -74,12 +74,18 @@ async function startServer() {
     app.use(express.json({ limit: "50mb" }));
     app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
-    // ✅ Serve uploaded files statically
-    const UPLOAD_DIR = path.join(process.cwd(), "uploads");
+    // ✅ Unified UPLOAD_DIR — must match exactly what storage.ts uses
+    const isRailway = !!process.env.RAILWAY_ENVIRONMENT || !!process.env.RAILWAY_STATIC_URL;
+    const UPLOAD_DIR = isRailway
+      ? path.join("/tmp", "uploads")
+      : path.join(process.cwd(), "uploads");
+
     if (!fs.existsSync(UPLOAD_DIR)) {
       fs.mkdirSync(UPLOAD_DIR, { recursive: true });
       console.log(`📁 [Storage] Created uploads directory: ${UPLOAD_DIR}`);
     }
+
+    // ✅ Serve uploaded files statically with full CORS headers
     app.use(
       "/uploads",
       express.static(UPLOAD_DIR, {
@@ -92,9 +98,50 @@ async function startServer() {
     );
     console.log(`📂 [Static] Serving uploads from: ${UPLOAD_DIR}`);
 
-    // 404 logger for missing uploads
-    app.get("/uploads/*", (_req, res) => {
-      res.status(404).json({ error: "File not found" });
+    // ✅ Direct HTTP download route — avoids tRPC overhead and CORS issues
+    app.get("/api/files/download/:fileId", async (req, res) => {
+      try {
+        const fileId = parseInt(req.params.fileId, 10);
+        if (isNaN(fileId)) {
+          res.status(400).json({ error: "معرّف الملف غير صالح" });
+          return;
+        }
+        const file = await db.getAcademicFileById(fileId);
+        if (!file || file.deletedAt) {
+          res.status(404).json({ error: "الملف غير موجود أو تم حذفه" });
+          return;
+        }
+
+        // Resolve the actual file path
+        let filePath: string;
+        if (file.fileKey && !file.fileKey.startsWith("http")) {
+          filePath = path.join(UPLOAD_DIR, file.fileKey);
+        } else if (file.fileUrl.startsWith("/uploads/")) {
+          const key = file.fileUrl.replace("/uploads/", "");
+          filePath = path.join(UPLOAD_DIR, key);
+        } else {
+          // External URL — redirect
+          res.redirect(302, file.fileUrl);
+          return;
+        }
+
+        if (!fs.existsSync(filePath)) {
+          console.error(`❌ [Download] File not on disk: ${filePath} (fileId=${fileId})`);
+          res.status(404).json({ error: "الملف غير موجود على الخادم. يرجى التواصل مع الإدارة." });
+          return;
+        }
+
+        // Increment download counter (fire-and-forget)
+        db.incrementFileDownloads(fileId).catch(() => {});
+
+        res.setHeader("Content-Disposition", `attachment; filename*=UTF-8''${encodeURIComponent(file.fileName)}`);
+        res.setHeader("Content-Type", file.mimeType || "application/octet-stream");
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        res.sendFile(filePath);
+      } catch (err) {
+        console.error("❌ [Download Route Error]:", err);
+        res.status(500).json({ error: "خطأ داخلي في السيرفر" });
+      }
     });
 
     // ✅ Health check (before tRPC so it's always reachable)

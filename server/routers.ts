@@ -599,7 +599,7 @@ export const appRouter = router({
         }));
       }),
 
-    upload: verifiedProcedure
+    upload: studentProcedure
       .input(
         z.object({
           fileName: z.string(),
@@ -648,59 +648,6 @@ export const appRouter = router({
         return { success: true };
       }),
 
-    incrementViews: publicProcedure
-      .input(z.object({ fileId: z.number() }))
-      .mutation(async ({ input }) => {
-        await incrementFileViews(input.fileId);
-        return { success: true };
-      }),
-
-    getFavorites: studentProcedure.query(async ({ ctx }) => {
-      const rows = await getStudentFavoritesFromDb(ctx.student.studentDbId as number);
-      return rows.map((f) => ({
-        ...f,
-        createdAt: f.createdAt.toISOString(),
-        isFavorite: true as const,
-      }));
-    }),
-
-    delete: studentProcedure
-      .input(z.object({ fileId: z.number() }))
-      .mutation(async ({ input, ctx }) => {
-        const file = await getAcademicFileById(input.fileId);
-        if (!file) throw new TRPCError({ code: "NOT_FOUND" });
-        const uid = ctx.student.studentDbId as number;
-        if (!ctx.student.isAdmin && file.uploadedByStudentID !== uid) {
-          throw new TRPCError({ code: "FORBIDDEN" });
-        }
-        await deleteAcademicFile(input.fileId);
-        return { success: true };
-      }),
-
-    toggleFavorite: studentProcedure
-      .input(z.object({ fileId: z.number() }))
-      .mutation(async ({ input, ctx }) => {
-        return await toggleFavoriteInDb(ctx.student.studentDbId as number, input.fileId);
-      }),
-
-    report: studentProcedure
-      .input(z.object({ fileId: z.number() }))
-      .mutation(async ({ input }) => {
-        await reportAcademicFile(input.fileId);
-        return { success: true, message: "تم إرسال البلاغ، شكراً لمساعدتنا في الحفاظ على جودة المحتوى." };
-      }),
-
-    download: verifiedProcedure
-      .input(z.object({ fileId: z.number() }))
-      .mutation(async ({ input }) => {
-        const file = await getAcademicFileById(input.fileId);
-        if (!file || file.deletedAt) {
-          throw new TRPCError({ code: "NOT_FOUND", message: "الملف غير موجود" });
-        }
-        const url = await storageGetSignedUrl(file.fileKey);
-        return { url, fileName: file.fileName };
-      }),
-
     approve: studentProcedure
       .input(z.object({ fileId: z.number() }))
       .mutation(async ({ input, ctx }) => {
@@ -709,7 +656,7 @@ export const appRouter = router({
         return { success: true };
       }),
 
-    analyzeDocument: verifiedProcedure
+    analyzeDocument: studentProcedure
       .input(z.object({ fileData: z.string(), mimeType: z.string() }))
       .mutation(async ({ input }) => {
         try {
@@ -768,15 +715,17 @@ export const appRouter = router({
         const file = await getAcademicFileById(input.fileId);
         if (!file) throw new TRPCError({ code: "NOT_FOUND", message: "الملف غير موجود" });
         await incrementFileDownloads(input.fileId);
-        
+
         let url = file.fileUrl;
-        const backendUrl = ENV.apiUrl || "http://localhost:4001";
+        // تحويل الروابط المحلية إلى روابط مطلقة نظراً للنشر السحابي
         if (url.startsWith("/uploads")) {
-            url = `${backendUrl}${url}`;
-        } else if (url.startsWith("http://localhost:")) {
-            url = url.replace(/^http:\/\/localhost:\d+/, backendUrl);
+          const backendUrl =
+            process.env.VITE_API_URL ||
+            process.env.RAILWAY_STATIC_URL ||
+            `http://localhost:${process.env.PORT || 4001}`;
+          url = `${backendUrl.replace(/\/+$/, "")}${url}`;
         }
-        
+
         return { success: true, url, fileName: file.fileName };
       }),
 

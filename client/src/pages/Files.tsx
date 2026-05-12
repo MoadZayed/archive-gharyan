@@ -282,24 +282,17 @@ export default function Files() {
     navigate("/login", { replace: true });
   };
 
-  const handleDownload = (fileUrl: string, fileName: string) => {
-    if (!user || (user.verificationStatus !== "VERIFIED" && !user.isAdmin)) return;
-    
-    const backendUrl = import.meta.env.VITE_API_URL || "http://localhost:4001";
-    const absoluteUrl = fileUrl.startsWith('http') ? fileUrl : `${backendUrl}${fileUrl}`;
-    
-    try {
-      const link = document.createElement("a");
-      link.href = absoluteUrl;
-      link.setAttribute("download", fileName);
-      link.setAttribute("target", "_blank");
-      link.setAttribute("rel", "noopener noreferrer");
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } catch {
-      window.open(absoluteUrl, "_blank");
-    }
+  const handleDownload = (fileId: number, fileName: string) => {
+    const backendUrl = (import.meta.env.VITE_API_URL || "http://localhost:4001").replace(/\/+$/, "");
+    const url = `${backendUrl}/api/files/download/${fileId}`;
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", fileName);
+    link.setAttribute("target", "_blank");
+    link.setAttribute("rel", "noopener noreferrer");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   if (!user) return null;
@@ -546,18 +539,17 @@ export default function Files() {
                   </div>
 
                     <div className="flex gap-3">
+                      {/* Preview — opens file directly in new tab */}
                       <a
                         href={(() => {
-                          const backendUrl = import.meta.env.VITE_API_URL || "http://localhost:4001";
-                          return file.fileUrl.startsWith('http') 
-                            ? file.fileUrl.replace(/^http:\/\/localhost:\d+/, backendUrl)
-                            : `${backendUrl}${file.fileUrl}`;
+                          const backendUrl = (import.meta.env.VITE_API_URL || "http://localhost:4001").replace(/\/+$/, "");
+                          const url = file.fileUrl || "";
+                          if (url.startsWith("http")) return url;
+                          return `${backendUrl}${url}`;
                         })()}
                         target="_blank"
                         rel="noopener noreferrer"
-                        onClick={(e) => {
-                          incrementViewsMutation.mutate({ fileId: file.id });
-                        }}
+                        onClick={() => incrementViewsMutation.mutate({ fileId: file.id })}
                         className={`flex-1 h-14 rounded-2xl font-black text-sm gap-2 border-2 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center no-underline ${
                           isFemale ? 'border-pink-200 text-pink-600 hover:bg-pink-50' : 'border-primary/20 text-primary hover:bg-primary/5'
                         }`}
@@ -565,46 +557,20 @@ export default function Files() {
                         <Eye size={20} strokeWidth={2.5} />
                         معاينة
                       </a>
-                      
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="flex-1">
-                              <a
-                                href={(() => {
-                                  const backendUrl = import.meta.env.VITE_API_URL || "http://localhost:4001";
-                                  return file.fileUrl.startsWith('http') 
-                                    ? file.fileUrl.replace(/^http:\/\/localhost:\d+/, backendUrl)
-                                    : `${backendUrl}${file.fileUrl}`;
-                                })()}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                download={file.fileName}
-                                onClick={(e) => {
-                                  if (user.verificationStatus !== 'VERIFIED' && !user.isAdmin) {
-                                    e.preventDefault();
-                                    return;
-                                  }
-                                  downloadMutation.mutate({ fileId: file.id });
-                                }}
-                                className={`w-full h-14 rounded-2xl font-black text-sm gap-2 shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center no-underline ${
-                                  user.verificationStatus !== 'VERIFIED' && !user.isAdmin ? 'opacity-50 pointer-events-none' : ''
-                                } ${
-                                  isFemale ? 'bg-pink-600 text-white shadow-pink-500/20' : 'bg-primary text-primary-foreground shadow-primary/20'
-                                }`}
-                              >
-                                <Download size={20} strokeWidth={2.5} />
-                                تنزيل
-                              </a>
-                            </div>
-                          </TooltipTrigger>
-                          {user.verificationStatus !== 'VERIFIED' && !user.isAdmin && (
-                            <TooltipContent className="font-black text-[10px] bg-yellow-500 text-white border-none shadow-xl">
-                              سيتم تفعيل هذه الميزة فور اعتماد حسابك من قبل الإدارة
-                            </TooltipContent>
-                          )}
-                        </Tooltip>
-                      </TooltipProvider>
+
+                      {/* Download — direct HTTP route, no tRPC needed */}
+                      <a
+                        href={`${(import.meta.env.VITE_API_URL || "http://localhost:4001").replace(/\/+$/, "")}/api/files/download/${file.id}`}
+                        download={file.fileName}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`flex-1 h-14 rounded-2xl font-black text-sm gap-2 shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center no-underline ${
+                          isFemale ? 'bg-pink-600 text-white shadow-pink-500/20' : 'bg-primary text-primary-foreground shadow-primary/20'
+                        }`}
+                      >
+                        <Download size={20} strokeWidth={2.5} />
+                        تنزيل
+                      </a>
                     </div>
 
                   <div className="mt-6 pt-6 border-t border-border/50 flex items-center justify-between">
@@ -656,7 +622,7 @@ export default function Files() {
         file={previewFile}
         onDownload={() => {
           if (previewFile) {
-            handleDownload(previewFile.fileUrl, previewFile.fileName);
+            handleDownload(previewFile.id, previewFile.fileName);
           }
         }}
       />

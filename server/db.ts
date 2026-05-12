@@ -219,10 +219,19 @@ export async function getStudentByGoogleId(googleId: string) {
 export async function getStudentByID(studentID: string) {
   const db = await getDb();
   if (!db) return undefined;
-  const result = await db.select().from(students)
-    .where(and(eq(students.studentID, studentID), isNull(students.deletedAt)))
+  // First check if student exists at all (including soft-deleted)
+  const allResult = await db.select().from(students)
+    .where(eq(students.studentID, studentID))
     .limit(1);
-  return result[0] ?? undefined;
+  if (allResult.length === 0) {
+    console.warn(`⚠️ [Auth] Student not found in DB: ${studentID}`);
+    return undefined;
+  }
+  if (allResult[0].deletedAt) {
+    console.warn(`⚠️ [Auth] Student account is soft-deleted: ${studentID}`);
+    return undefined;
+  }
+  return allResult[0];
 }
 
 export async function getStudentByDbId(id: number) {
