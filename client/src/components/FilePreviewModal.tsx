@@ -7,7 +7,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Download, Eye, FileWarning, Maximize2, ZoomIn, ZoomOut } from "lucide-react";
 import { useState } from "react";
-import { useGender } from "@/contexts/GenderContext";
 
 interface FilePreviewModalProps {
   isOpen: boolean;
@@ -23,20 +22,20 @@ interface FilePreviewModalProps {
 
 export default function FilePreviewModal({ isOpen, onClose, file, onDownload }: FilePreviewModalProps) {
   const [zoom, setZoom] = useState(1);
-  const { genderTheme } = useGender();
-  const isFemale = genderTheme === 'female';
 
   if (!file) return null;
 
   const isImage = file.mimeType.startsWith("image/");
-  const isPdf = file.mimeType === "application/pdf";
+  const isPdf = file.mimeType.toLowerCase().includes("pdf");
   const canPreview = isImage || isPdf;
 
   // ✅ Construct absolute URL (Fixed instructions point 2 & 3)
-  const backendUrl = import.meta.env.VITE_API_URL || "http://localhost:4001";
+  const rawBackendUrl = import.meta.env.VITE_API_URL || "http://localhost:4001";
+  const backendUrl = rawBackendUrl.replace(/\/+$/, "");
+  const cleanFileUrl = file.fileUrl.startsWith('/') ? file.fileUrl : `/${file.fileUrl}`;
   const absoluteUrl = file.fileUrl.startsWith('http') 
     ? file.fileUrl 
-    : `${backendUrl}${file.fileUrl}`;
+    : `${backendUrl}${cleanFileUrl}`;
 
   return (
     <ShadcnDialog open={isOpen} onOpenChange={onClose}>
@@ -44,7 +43,7 @@ export default function FilePreviewModal({ isOpen, onClose, file, onDownload }: 
         <ShadcnDialogHeader className="p-6 border-b shrink-0">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-4 overflow-hidden">
-              <div className={`p-3 rounded-2xl shrink-0 ${isFemale ? 'bg-pink-100 text-pink-600' : 'bg-primary/10 text-primary'}`}>
+              <div className="p-3 rounded-2xl shrink-0" style={{ backgroundColor: 'rgba(233,30,99,0.1)', color: 'var(--accent-primary)' }}>
                 <Eye size={24} />
               </div>
               <ShadcnDialogTitle className="text-xl font-black truncate">
@@ -53,10 +52,11 @@ export default function FilePreviewModal({ isOpen, onClose, file, onDownload }: 
             </div>
             <Button 
               onClick={onDownload}
-              className={`shrink-0 rounded-xl font-bold flex gap-2 ${isFemale ? 'bg-pink-600 hover:bg-pink-700' : ''}`}
+              className="shrink-0 rounded-xl font-bold flex gap-2 border-none text-white shadow-lg"
+              style={{ background: 'var(--button-gradient)' }}
             >
               <Download size={18} />
-              تنزيل
+              تحميل الملف
             </Button>
           </div>
         </ShadcnDialogHeader>
@@ -87,7 +87,7 @@ export default function FilePreviewModal({ isOpen, onClose, file, onDownload }: 
               </p>
               <Button onClick={onDownload} size="lg" className="w-full rounded-2xl h-14 font-black text-lg gap-3">
                 <Download size={24} />
-                تنزيل الملف الآن
+                تحميل الملف
               </Button>
             </div>
           )}

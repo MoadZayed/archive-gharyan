@@ -1,17 +1,27 @@
-import { MessageCircle } from "lucide-react";
+import { MessageCircle, Eye, EyeOff } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 
 export default function WhatsAppButton() {
   const [showTooltip, setShowTooltip] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
   const phoneNumber = "218944879547"; 
   const message = encodeURIComponent("السلام عليكم، أحتاج إلى دعم فني بخصوص منصة GITA");
   const whatsappUrl = `https://wa.me/${phoneNumber}?text=${message}`;
 
   return (
-    <div className="fixed bottom-8 left-8 z-[9999] flex flex-col items-end gap-3 group">
+    <div className="fixed bottom-32 md:bottom-8 left-4 md:left-8 z-[9999] flex flex-col items-start gap-2 group">
+      {/* Minimize Toggle Button */}
+      <button 
+        onClick={() => setIsMinimized(!isMinimized)}
+        className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm text-slate-600 dark:text-slate-300 rounded-full p-1.5 shadow-lg border border-emerald-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors self-start ml-2"
+        title={isMinimized ? "إظهار زر الواتساب" : "إخفاء زر الواتساب"}
+      >
+        {isMinimized ? <Eye size={12} className="text-emerald-500" /> : <EyeOff size={12} />}
+      </button>
+
       <AnimatePresence>
-        {showTooltip && (
+        {showTooltip && !isMinimized && (
           <motion.div
             initial={{ opacity: 0, x: -20, scale: 0.8 }}
             animate={{ opacity: 1, x: 0, scale: 1 }}
@@ -29,19 +39,25 @@ export default function WhatsAppButton() {
         rel="noopener noreferrer"
         onMouseEnter={() => setShowTooltip(true)}
         onMouseLeave={() => setShowTooltip(false)}
-        whileHover={{ scale: 1.1, rotate: 5 }}
-        whileTap={{ scale: 0.9 }}
-        className="relative flex items-center justify-center w-16 h-16 bg-emerald-500 text-white rounded-full shadow-[0_0_30px_rgba(16,185,129,0.5)] transition-all hover:bg-emerald-600 border-4 border-white/20"
+        whileHover={isMinimized ? {} : { scale: 1.1, rotate: 5 }}
+        whileTap={isMinimized ? {} : { scale: 0.9 }}
+        className={`relative flex items-center justify-center w-12 h-12 md:w-16 md:h-16 bg-emerald-500 text-white rounded-full shadow-[0_0_30px_rgba(16,185,129,0.5)] transition-all hover:bg-emerald-600 border-2 md:border-4 border-white/20 ${
+          isMinimized ? "opacity-20 scale-75 pointer-events-none" : "opacity-100 scale-100 pointer-events-auto"
+        }`}
       >
-        {/* Pulsing Ring */}
-        <div className="absolute inset-0 rounded-full bg-emerald-500 animate-ping opacity-20" />
+        {/* Pulsing Ring - only when not minimized */}
+        {!isMinimized && (
+          <div className="absolute inset-0 rounded-full bg-emerald-500 animate-ping opacity-20" />
+        )}
         
-        <MessageCircle size={32} className="relative z-10 drop-shadow-md" />
+        <MessageCircle className="relative z-10 drop-shadow-md h-6 w-6 md:h-8 md:w-8" />
         
         {/* Label for mobile/always visible if preferred */}
-        <div className="absolute right-full mr-4 top-1/2 -translate-y-1/2 hidden group-hover:flex bg-emerald-600 text-white px-4 py-2 rounded-xl text-[10px] font-black whitespace-nowrap shadow-xl">
-           واتساب الدعم الفني
-        </div>
+        {!isMinimized && (
+          <div className="absolute right-full mr-4 top-1/2 -translate-y-1/2 hidden group-hover:flex bg-emerald-600 text-white px-4 py-2 rounded-xl text-[10px] font-black whitespace-nowrap shadow-xl">
+             واتساب الدعم الفني
+          </div>
+        )}
       </motion.a>
     </div>
   );

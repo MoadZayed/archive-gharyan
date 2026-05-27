@@ -1,29 +1,15 @@
-import fs from "fs/promises";
-import path from "path";
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import crypto from "crypto";
 
-// مسار المجلد الذي سيتم حفظ الملفات فيه
-// في Railway، نستخدم /tmp لأنه المجلد الوحيد القابل للكتابة
-const isRailway = !!process.env.RAILWAY_ENVIRONMENT || !!process.env.RAILWAY_STATIC_URL;
-const UPLOAD_DIR = isRailway
-  ? path.join("/tmp", "uploads")
-  : path.join(process.cwd(), "uploads");
-
-// تأكد من وجود المجلد عند بدء التشغيل
-(async () => {
-  try {
-    await fs.mkdir(UPLOAD_DIR, { recursive: true });
-    console.log(`📁 [Storage] Upload directory ready: ${UPLOAD_DIR}`);
-  } catch (err) {
-    console.warn(`⚠️ [Storage] Could not create upload dir: ${UPLOAD_DIR}`, err);
-  }
-})();
-
-async function ensureUploadDir(subPath = "") {
-  const fullPath = subPath ? path.join(UPLOAD_DIR, subPath) : UPLOAD_DIR;
-  await fs.mkdir(fullPath, { recursive: true });
-  return fullPath;
-}
+const s3 = new S3Client({
+  endpoint: process.env.B2_ENDPOINT!,
+  region: process.env.B2_REGION!,
+  credentials: {
+    accessKeyId: process.env.B2_APPLICATION_KEY_ID!,
+    secretAccessKey: process.env.B2_APPLICATION_KEY!,
+  },
+});
 
 function normalizeKey(relKey: string): string {
   return relKey.replace(/^\/+/, "").replace(/\\/g, "/");
@@ -36,44 +22,73 @@ function appendHashSuffix(relKey: string): string {
   return `${relKey.slice(0, lastDot)}_${hash}${relKey.slice(lastDot)}`;
 }
 
-export async function storagePut(
-  relKey: string,
-  data: Buffer | Uint8Array | string,
-  _contentType = "application/octet-stream"
-): Promise<{ key: string; url: string }> {
+export async function storagePut(key: string, body: Buffer, mime: string) {
+  const finalKey = appendHashSuffix(normalizeKey(key));
+  await s3.send(new PutObjectCommand({
+    Bucket: process.env.B2_BUCKET_NAME,
+    Key: finalKey,
+    Body: body,
+    ContentType: mime,
+  }));
+  return {
+    key: finalKey,
+    url: `https://${process.env.B2_BUCKET_NAME}.s3.${process.env.B2_REGION}.backblazeb2.com/${finalKey}`
+  };
+}
+
+export async function storageGet(key: string) {
+  const url = await getSignedUrl(s3, new GetObjectCommand({
+    Bucket: process.env.B2_BUCKET_NAME,
+    Key: key,
+  }), { expiresIn: 3600 });
+  return { key, url };
+}
+
+export async function storageDelete(key: string): Promise<boolean> {
   try {
-    const key = appendHashSuffix(normalizeKey(relKey));
-    const dirPath = path.dirname(key);
-    await ensureUploadDir(dirPath === "." ? "" : dirPath);
-
-    const filePath = path.join(UPLOAD_DIR, key);
-
-    let bufferData: Buffer;
-    if (typeof data === "string") {
-      bufferData = Buffer.from(data, "utf-8");
-    } else if (data instanceof Uint8Array) {
-      bufferData = Buffer.from(data);
-    } else {
-      bufferData = data;
-    }
-
-    await fs.writeFile(filePath, bufferData, { mode: 0o644 });
-
-    const url = `/uploads/${key}`;
-    console.log(`✅ [Storage] File saved: ${filePath} → ${url}`);
-    return { key, url };
-  } catch (error: any) {
-    console.error(`❌ [Storage] Write failed for ${relKey}:`, error.code, error.message);
-    throw new Error(`فشل في حفظ الملف: ${error.message}`);
+    await s3.send(new DeleteObjectCommand({
+      Bucket: process.env.B2_BUCKET_NAME,
+      Key: key,
+    }));
+    console.log(`🗑️ [Storage] Permanently deleted file from B2: ${key}`);
+    return true;
+  } catch (error) {
+    console.error(`❌ [Storage Delete Error] for ${key}:`, error);
+    return false;
   }
 }
 
-export async function storageGet(relKey: string): Promise<{ key: string; url: string }> {
-  const key = normalizeKey(relKey);
-  return { key, url: `/uploads/${key}` };
+export async function storageHeadObject(key: string) {
+  try {
+    const response = await s3.send(new HeadObjectCommand({
+      Bucket: process.env.B2_BUCKET_NAME,
+      Key: key,
+    }));
+    return {
+      exists: true,
+      contentLength: response.ContentLength,
+      contentType: response.ContentType,
+    };
+  } catch (error: any) {
+    if (error.name === 'NotFound' || error.$metadata?.httpStatusCode === 404) {
+      return { exists: false };
+    }
+    throw error;
+  }
 }
 
-export async function storageGetSignedUrl(relKey: string): Promise<string> {
-  const key = normalizeKey(relKey);
-  return `/uploads/${key}`;
+export async function storageGetSignedUrl(key: string, _expiresIn = 3600): Promise<string> {
+  const { url } = await storageGet(key);
+  return url;
+}
+
+export async function storageGetSignedPutUrl(key: string, mimeType: string, _expiresIn = 600): Promise<{ url: string, finalKey: string }> {
+  const finalKey = appendHashSuffix(normalizeKey(key));
+  const url = await getSignedUrl(s3, new PutObjectCommand({
+    Bucket: process.env.B2_BUCKET_NAME,
+    Key: finalKey,
+    ContentType: mimeType,
+  }), { expiresIn: _expiresIn });
+  
+  return { url, finalKey };
 }

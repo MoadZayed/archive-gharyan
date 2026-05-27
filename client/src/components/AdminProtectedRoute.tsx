@@ -16,8 +16,11 @@ export default function AdminProtectedRoute({ children }: AdminProtectedRoutePro
       if (!user) {
         navigate("/admin-login", { replace: true });
       } else if (user.role !== 'admin' && !user.isAdmin) {
-        // Logged in but not an admin
-        navigate("/", { replace: true });
+        if (user.role === 'moderator') {
+          navigate("/moderator/panel", { replace: true });
+        } else {
+          navigate("/files", { replace: true });
+        }
       }
     }
   }, [user, loading, navigate]);

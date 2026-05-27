@@ -39,6 +39,7 @@ const SCHEMA_SQL = [
     deletedAt TIMESTAMP NULL,
     petals INT DEFAULT 0 NOT NULL,
     verificationStatus ENUM('PENDING', 'VERIFIED', 'REJECTED') DEFAULT 'PENDING' NOT NULL,
+    onboardingCompleted BOOLEAN DEFAULT FALSE NOT NULL,
     createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL
   )`,
@@ -93,7 +94,64 @@ const SCHEMA_SQL = [
     message TEXT NOT NULL,
     isRead BOOLEAN DEFAULT FALSE NOT NULL,
     createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
-  )`
+  )`,
+  `CREATE TABLE IF NOT EXISTS studentCourses (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    studentId VARCHAR(50) NOT NULL,
+    courseId VARCHAR(255) NOT NULL,
+    addedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    semester VARCHAR(20),
+    academicYear VARCHAR(20),
+    UNIQUE KEY student_course_idx (studentId, courseId)
+  )`,
+  `CREATE TABLE IF NOT EXISTS loginAttempts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(320) NOT NULL,
+    ipAddress VARCHAR(45),
+    attemptedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    wasSuccessful BOOLEAN NOT NULL
+  )`,
+  `ALTER TABLE students ADD COLUMN onboardingCompleted BOOLEAN DEFAULT FALSE NOT NULL`,
+  `ALTER TABLE students MODIFY COLUMN role ENUM('student', 'professor', 'moderator', 'admin') DEFAULT 'student' NOT NULL`,
+  `ALTER TABLE students ADD COLUMN moderatorPermissions TEXT`,
+  `ALTER TABLE students ADD COLUMN registrationStatus ENUM('pending', 'approved', 'rejected', 'suspended') DEFAULT 'pending' NOT NULL`,
+  `ALTER TABLE students ADD COLUMN isApproved BOOLEAN DEFAULT FALSE NOT NULL`,
+  `ALTER TABLE students ADD COLUMN approvedAt TIMESTAMP NULL`,
+  `ALTER TABLE students ADD COLUMN approvedBy INT NULL`,
+  `ALTER TABLE students ADD COLUMN rejectionReason TEXT NULL`,
+  `ALTER TABLE students ADD COLUMN lastLoginAt TIMESTAMP NULL`,
+  `ALTER TABLE academicFiles ADD COLUMN status ENUM('uploading', 'processing', 'ready', 'failed', 'pending', 'approved', 'rejected', 'flagged') DEFAULT 'pending' NOT NULL`,
+  `ALTER TABLE academicFiles ADD COLUMN approvedAt TIMESTAMP NULL`,
+  `ALTER TABLE academicFiles ADD COLUMN approvedBy INT NULL`,
+  `ALTER TABLE academicFiles ADD COLUMN rejectedAt TIMESTAMP NULL`,
+  `ALTER TABLE academicFiles ADD COLUMN rejectedBy INT NULL`,
+  `ALTER TABLE academicFiles ADD COLUMN rejectionReason TEXT NULL`,
+  `ALTER TABLE academicFiles ADD COLUMN failReason TEXT NULL`,
+  `CREATE TABLE IF NOT EXISTS announcements (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255),
+    content TEXT NOT NULL,
+    createdBy INT NOT NULL,
+    isActive BOOLEAN DEFAULT TRUE NOT NULL,
+    targetAudience ENUM('all', 'students', 'moderators') DEFAULT 'all' NOT NULL,
+    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+  )`,
+  `ALTER TABLE academicFiles ADD COLUMN downloads INT DEFAULT 0 NOT NULL`,
+  `ALTER TABLE academicFiles ADD COLUMN semester VARCHAR(50) NULL`,
+  `ALTER TABLE academicFiles ADD COLUMN academicYear VARCHAR(20) NULL`,
+  `CREATE TABLE IF NOT EXISTS aiJobs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    fileId INT NOT NULL,
+    status ENUM('pending', 'processing', 'completed', 'failed') DEFAULT 'pending' NOT NULL,
+    attempts INT DEFAULT 0 NOT NULL,
+    errorReason TEXT,
+    lockedAt TIMESTAMP NULL,
+    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL
+  )`,
+  `ALTER TABLE aiJobs ADD COLUMN lockedAt TIMESTAMP NULL`,
+  `CREATE INDEX idx_academic_files_search ON academicFiles(subject, year, fileType)`,
+  `CREATE INDEX idx_ai_jobs_status ON aiJobs(status)`,
 ];
 
 export async function getDb() {
@@ -114,9 +172,9 @@ export async function getDb() {
         multipleStatements: true
       });
 
-      _pool.on('error', (err) => {
+      (_pool as any).on('error', (err: any) => {
         console.error('🚨 [DB Pool Error]:', err);
-        if (err.code === 'PROTOCOL_CONNECTION_LOST') {
+        if (err && err.code === 'PROTOCOL_CONNECTION_LOST') {
           console.log('🔄 [DB] Connection lost. Pool will handle reconnect.');
         } else {
           _db = null;
@@ -131,7 +189,7 @@ export async function getDb() {
           try {
             await _pool.query(sql_stmt);
           } catch (err: any) {
-            if (!err.message?.includes("already exists")) {
+            if (!err.message?.includes("already exists") && !err.message?.includes("Duplicate column name") && !err.message?.includes("Duplicate key name")) {
               console.error(`⚠️ [DB Schema Warning] Statement failed: ${sql_stmt.substring(0, 50)}...`, err.message);
             }
           }
@@ -306,7 +364,7 @@ export async function getAllAcademicFiles(
   isAdmin = false,
   studentDbId?: number | string,
   limit = 20, offset = 0,
-  filters?: { search?: string; fileType?: string; year?: number; subject?: string; doctorName?: string; }
+  filters?: { search?: string; fileType?: string; year?: number; subject?: string; doctorName?: string; subjects?: string[]; }
 ) {
   const db = await getDb();
   if (!db) return [];
@@ -327,13 +385,19 @@ export async function getAllAcademicFiles(
         like(academicFiles.fileName, s),
         like(academicFiles.description, s),
         like(academicFiles.subject, s),
-        like(academicFiles.doctorName, s)
+        like(academicFiles.courseCode, s),
+        like(academicFiles.doctorName, s),
+        like(students.fullName, s)
       ));
     }
     if (filters.fileType) whereConditions.push(eq(academicFiles.fileType, filters.fileType));
     if (filters.year) whereConditions.push(eq(academicFiles.year, filters.year));
     if (filters.subject) whereConditions.push(like(academicFiles.subject, `%${filters.subject}%`));
     if (filters.doctorName) whereConditions.push(like(academicFiles.doctorName, `%${filters.doctorName}%`));
+    if (filters.subjects && filters.subjects.length > 0) {
+      const subjectConditions = filters.subjects.map(s => like(academicFiles.subject, `%${s}%`));
+      whereConditions.push(or(...subjectConditions));
+    }
   }
 
   const votesCount = db.select({
@@ -349,13 +413,16 @@ export async function getAllAcademicFiles(
     uploadedByStudentID: academicFiles.uploadedByStudentID,
     uploadedBy: students.fullName, uploaderPetals: students.petals,
     fileUrl: academicFiles.fileUrl, mimeType: academicFiles.mimeType,
-    views: academicFiles.views, isApproved: academicFiles.isApproved,
+    views: academicFiles.views, downloads: academicFiles.downloads,
+    isApproved: academicFiles.isApproved,
+    status: academicFiles.status,
+    rejectionReason: academicFiles.rejectionReason,
     reportsCount: academicFiles.reportsCount, createdAt: academicFiles.createdAt,
     votes: sql<number>`IFNULL(${votesCount.totalVotes}, 0)`.as('votes'),
   })
     .from(academicFiles)
     .leftJoin(votesCount, eq(academicFiles.id, votesCount.fileID))
-    .innerJoin(students, eq(academicFiles.uploadedByStudentID, students.id))
+    .leftJoin(students, eq(academicFiles.uploadedByStudentID, students.id))
     .where(and(...whereConditions))
     .orderBy(desc(academicFiles.createdAt))
     .limit(limit).offset(offset);
@@ -369,7 +436,25 @@ export async function incrementFileViews(id: number) {
 
 export async function getStudentFiles(studentID: number) {
   const db = await getDb();
-  return db?.select().from(academicFiles).where(eq(academicFiles.uploadedByStudentID, studentID)) ?? [];
+  if (!db) return [];
+  const votesCount = db.select({ fileID: fileVotes.fileID, totalVotes: sql<number>`SUM(${fileVotes.voteType})`.as("totalVotes") }).from(fileVotes).groupBy(fileVotes.fileID).as("v");
+  
+  return db.select({
+    id: academicFiles.id, fileName: academicFiles.fileName,
+    fileType: academicFiles.fileType, subject: academicFiles.subject,
+    year: academicFiles.year, description: academicFiles.description,
+    uploadedByStudentID: academicFiles.uploadedByStudentID,
+    uploadedBy: students.fullName, uploaderPetals: students.petals,
+    fileUrl: academicFiles.fileUrl, mimeType: academicFiles.mimeType,
+    views: academicFiles.views, isApproved: academicFiles.isApproved,
+    createdAt: academicFiles.createdAt,
+    votes: sql<number>`IFNULL(${votesCount.totalVotes}, 0)`.as('votes'),
+  })
+    .from(academicFiles)
+    .leftJoin(votesCount, eq(academicFiles.id, votesCount.fileID))
+    .leftJoin(students, eq(academicFiles.uploadedByStudentID, students.id))
+    .where(and(eq(academicFiles.uploadedByStudentID, studentID), isNull(academicFiles.deletedAt)))
+    .orderBy(desc(academicFiles.createdAt));
 }
 
 export async function deleteAcademicFile(id: number) { // soft delete
@@ -560,7 +645,7 @@ export async function getAllFilesWithUploader() {
     uploadedBy: students.fullName, studentID: students.studentID,
     isApproved: academicFiles.isApproved, reportsCount: academicFiles.reportsCount,
     deletedAt: academicFiles.deletedAt, createdAt: academicFiles.createdAt,
-  }).from(academicFiles).innerJoin(students, eq(academicFiles.uploadedByStudentID, students.id))
+  }).from(academicFiles).leftJoin(students, eq(academicFiles.uploadedByStudentID, students.id))
     .where(isNull(academicFiles.deletedAt));
 }
 
@@ -574,7 +659,7 @@ export async function getDeletedAcademicFiles() {
     uploadedBy: students.fullName, studentID: students.studentID,
     isApproved: academicFiles.isApproved, reportsCount: academicFiles.reportsCount,
     deletedAt: academicFiles.deletedAt, createdAt: academicFiles.createdAt,
-  }).from(academicFiles).innerJoin(students, eq(academicFiles.uploadedByStudentID, students.id))
+  }).from(academicFiles).leftJoin(students, eq(academicFiles.uploadedByStudentID, students.id))
     .where(isNotNull(academicFiles.deletedAt));
 }
 
@@ -651,7 +736,11 @@ export async function getExistingLectureNumbers(subject: string, doctorName: str
     isNull(academicFiles.deletedAt), like(academicFiles.subject, `%${subject}%`),
     like(academicFiles.doctorName, `%${doctorName}%`), eq(academicFiles.academicYear, academicYear)
   ));
-  return [...new Set(rows.map(r => r.lectureNumber).filter(Number.isInteger as any))].sort((a, b) => a - b);
+  const lectureNumbers = rows
+    .map(r => r.lectureNumber)
+    .filter((l): l is number => l !== null && Number.isInteger(l));
+  
+  return [...new Set(lectureNumbers)].sort((a, b) => a - b);
 }
 
 export async function deleteStudentFromDb(id: number) {
@@ -682,7 +771,6 @@ export async function addNotification(data: InsertNotification) {
   if (!db) return;
   return db.insert(notifications).values(data);
 }
-
 
 export async function incrementFileDownloads(fileId: number) {
   const db = await getDb();

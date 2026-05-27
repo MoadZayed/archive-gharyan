@@ -15,6 +15,13 @@
       "when": 1777512339511,
       "tag": "0001_huge_tombstone",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1779145306123,
+      "tag": "0002_minor_boomerang",
+      "breakpoints": true
     }
   ]
 }

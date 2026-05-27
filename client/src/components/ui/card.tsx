@@ -2,14 +2,20 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-function Card({ className, ...props }: React.ComponentProps<"div">) {
+function Card({ className, style, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card"
       className={cn(
-        "bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm",
+        "flex flex-col gap-6 rounded-xl border py-6 shadow-sm",
         className
       )}
+      style={{
+        backgroundColor: 'var(--bg-cards, white)',
+        color: 'var(--text-primary, inherit)',
+        borderColor: 'var(--border-color, rgba(0,0,0,0.1))',
+        ...style,
+      }}
       {...props}
     />
   );

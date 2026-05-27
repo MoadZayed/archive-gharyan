@@ -24,17 +24,17 @@ export default defineConfig({
         display: 'standalone',
         icons: [
           {
-            src: 'pwa-192x192.png',
+            src: 'logo.png',
             sizes: '192x192',
             type: 'image/png'
           },
           {
-            src: 'pwa-512x512.png',
+            src: 'logo.png',
             sizes: '512x512',
             type: 'image/png'
           },
           {
-            src: 'pwa-512x512.png',
+            src: 'logo.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable'
@@ -72,23 +72,36 @@ export default defineConfig({
     outDir: path.resolve(__dirname, "dist/public"),
     emptyOutDir: true,
     target: 'esnext', // تحسين أداء جافا سكريبت الحديثة
+    minify: 'esbuild', // التأكد من استخدام esbuild للضغط والسرعة
     chunkSizeWarningLimit: 2000, // رفع الحد لـ 2MB لضمان بناء نظيف تماماً في Vercel
     rollupOptions: {
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            // فصل المكتبات الرسومية الضخمة لأنها تستهلك مساحة كبيرة
-            if (id.includes('three') || id.includes('@react-three') || id.includes('drei')) {
-              return 'vendor-3d';
+            if (id.includes('/react/') || id.includes('/react-dom/') || 
+                id.includes('/react-is/') || id.includes('/scheduler/')) {
+              return 'vendor-react'
             }
-            if (id.includes('framer-motion')) {
-              return 'vendor-animation';
+            if (id.includes('/@trpc/') || 
+                id.includes('/@tanstack/')) {
+              return 'vendor-query'
             }
-            if (id.includes('lucide-react')) {
-              return 'vendor-icons';
+            if (id.includes('/recharts/') || 
+                id.includes('/d3-') || 
+                id.includes('/victory-')) {
+              return 'vendor-charts'
             }
-            // وضع باقي المكتبات في core لتقليل عدد الملفات الصغيرة
-            return 'vendor-core';
+            if (id.includes('/framer-motion/')) {
+              return 'vendor-animation'
+            }
+            if (id.includes('/lucide-react/')) {
+              return 'vendor-icons'
+            }
+            if (id.includes('/@react-oauth/') || 
+                id.includes('/google-auth/')) {
+              return 'vendor-oauth'
+            }
+            return 'vendor-core'
           }
         }
       }
@@ -101,6 +114,8 @@ export default defineConfig({
     ],
   },
   server: {
+    host: '0.0.0.0',
+    port: 5173,
     proxy: {
       "/api": {
         target: "http://localhost:4001",

@@ -33,12 +33,12 @@ export default function PendingStudentsList() {
 
   if (pendingStudents.length === 0) {
     return (
-      <Card className="p-20 text-center bg-card/20 border-dashed rounded-[3rem] border-2 border-border/50">
-        <div className="w-20 h-20 bg-primary/5 rounded-[2rem] flex items-center justify-center mx-auto mb-6 text-primary/20">
-          <Shield size={40} />
+      <Card className="p-20 text-center bg-card/20 dark:bg-white/5 border-dashed rounded-[3rem] border-2 border-border/50 dark:border-white/5">
+        <div className="w-20 h-20 bg-primary/5 rounded-[2rem] flex items-center justify-center mx-auto mb-6 text-primary/20 dark:text-white/20">
+          <Shield size={40} className="dark:text-white" />
         </div>
-        <h3 className="text-2xl font-black mb-2 italic">لا توجد طلبات انتظار حالياً</h3>
-        <p className="text-muted-foreground font-bold">كل شيء تحت السيطرة! جميع الطلاب المسجلين تم التعامل معهم.</p>
+        <h3 className="text-2xl font-black mb-2 italic dark:text-white">لا توجد طلبات انتظار حالياً</h3>
+        <p className="text-muted-foreground dark:text-slate-300 font-bold">كل شيء تحت السيطرة! جميع الطلاب المسجلين تم التعامل معهم.</p>
       </Card>
     );
   }
@@ -72,11 +72,11 @@ export default function PendingStudentsList() {
                       <User size={32} />
                     </div>
                     <div>
-                      <h4 className="text-xl font-black mb-1 group-hover:text-primary transition-colors">{student.fullName}</h4>
+                      <h4 className="text-xl font-black mb-1 group-hover:text-primary transition-colors dark:text-white">{student.fullName}</h4>
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                        <div className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground">
-                          <Shield size={12} className="text-primary/40" />
-                          رقم القيد: <span className="text-foreground">{student.studentID}</span>
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground dark:text-slate-400">
+                          <Shield size={12} className="text-primary/40 dark:text-white/40" />
+                          رقم القيد: <span className="text-foreground dark:text-white">{student.studentID}</span>
                         </div>
                         <div className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground">
                           <Calendar size={12} className="text-primary/40" />

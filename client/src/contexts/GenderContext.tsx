@@ -37,9 +37,5 @@ export const GenderProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 };
 
 export const useGender = () => {
-  const context = useContext(GenderContext);
-  if (!context) {
-    throw new Error("useGender must be used within a GenderProvider");
-  }
-  return context;
+  return { genderTheme: 'female' as GenderTheme, toggleGender: () => {}, setGender: () => {} };
 };

@@ -3,10 +3,13 @@
 /* stylelint-disable at-rule-no-unknown */
 
 /* stylelint-disable-next-line at-rule-no-unknown */
-@variant dark (&:is(.dark *));
+/* Make Tailwind dark: variant work with GITA's data-mode="dark" attribute system */
+@variant dark (&:is([data-mode="dark"] *));
 
 * {
+  font-family: var(--font-arabic);
   -webkit-user-select: none;
+
   -moz-user-select: none;
   -ms-user-select: none;
   user-select: none;
@@ -21,27 +24,32 @@ input, textarea, [contenteditable], [contenteditable="true"], label, a, button {
   user-select: text !important;
 }
 
-/* Force Solid Background for Popovers/Selects/Command to prevent transparency & contrast bugs */
+/* Fix Autofill background color in dark mode */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px var(--bg-secondary) inset !important;
+  -webkit-text-fill-color: var(--text-primary) !important;
+  caret-color: var(--text-primary);
+}
+
+/* Force Solid Background only for DROPDOWN/POPOVER/SELECT overlays - NOT cards or inputs */
 [data-radix-popper-content-wrapper] {
   z-index: 100 !important;
 }
 
-/* Base Dropdown Styling - Light Mode */
-.popover-content, 
-[role="listbox"], 
-.select-content, 
+/* Dropdown overlays need solid background to prevent transparency */
 [data-radix-select-content],
-[data-radix-popover-content],
-.bg-popover,
-.bg-card {
-  background-color: white !important;
-  color: #0f172a !important; /* slate-900 */
+[data-radix-popover-content] {
+  background-color: var(--bg-cards, white) !important;
+  color: var(--text-primary, #0f172a) !important;
   opacity: 1 !important;
-  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.1)) !important;
 }
 
 /* Ensure items inside are readable */
-[role="option"], 
+[role="option"],
 [data-radix-collection-item],
 .command-item,
 [data-radix-select-item] {
@@ -49,29 +57,10 @@ input, textarea, [contenteditable], [contenteditable="true"], label, a, button {
   color: inherit !important;
 }
 
-[role="option"]:hover, 
+[role="option"]:hover,
 [data-radix-collection-item][data-highlighted],
 .command-item[data-selected="true"] {
-  background-color: rgba(0, 0, 0, 0.05) !important;
-}
-
-/* Dark Mode Overrides */
-.dark .popover-content, 
-.dark [role="listbox"], 
-.dark .select-content, 
-.dark [data-radix-select-content],
-.dark [data-radix-popover-content],
-.dark .bg-popover,
-.dark .bg-card {
-  background-color: #0f172a !important; /* slate-900 */
-  color: #f8fafc !important; /* slate-50 */
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-}
-
-.dark [role="option"]:hover, 
-.dark [data-radix-collection-item][data-highlighted],
-.dark .command-item[data-selected="true"] {
-  background-color: rgba(255, 255, 255, 0.1) !important;
+  background-color: var(--glass-white, rgba(0,0,0,0.05)) !important;
 }
 
 html, body {
@@ -124,6 +113,9 @@ html, body {
   --color-gender-primary: var(--gender-primary);
   --color-gender-secondary: var(--gender-secondary);
   --color-gender-bg: var(--gender-bg);
+
+  --font-arabic: var(--font-arabic);
+  --font-english: var(--font-english);
 }
 
 /* Print Protection: Hide everything when trying to print or screenshot via print */
@@ -134,20 +126,23 @@ html, body {
 }
 
 :root {
-  /* Default (Female) - Elegant Pink/Berry Theme (Winzo Standard) */
-  --gender-primary: 340 70% 50%; /* Vibrant Pink */
-  --gender-secondary: 340 20% 95%; /* Soft Pink */
-  --gender-bg: 340 100% 98%;
-  --background: 340 100% 98%;
-  --foreground: 340 95% 5%; /* High Contrast Deep Black-Pink */
-  --primary: 340 70% 50%;
+  --font-arabic: 'Cairo', sans-serif;
+  --font-english: 'Outfit', sans-serif;
+
+  /* Default (Female) - Blush/Rose Gold Premium Aesthetic */
+  --gender-primary: 345 75% 60%; /* Warm Rose */
+  --gender-secondary: 345 30% 98%; /* Soft Blush */
+  --gender-bg: 345 50% 98%;
+  --background: 345 50% 98%;
+  --foreground: 345 95% 10%; /* Deep Rose-Stone */
+  --primary: 345 75% 60%;
   --primary-foreground: 0 0% 100%;
-  --card: 340 100% 99%;
-  --card-foreground: 340 95% 5%;
-  --border: 340 30% 90%;
-  --ring: 340 70% 50%;
-  --muted: 340 20% 92%;
-  --muted-foreground: 340 50% 25%; /* Stronger Muted Text */
+  --card: 345 100% 100%;
+  --card-foreground: 345 95% 10%;
+  --border: 345 40% 92%;
+  --ring: 345 75% 60%;
+  --muted: 345 30% 96%;
+  --muted-foreground: 345 40% 35%;
 
   &[data-gender="male"] {
     --gender-primary: 217 100% 45%; /* Deep Blue */
@@ -167,17 +162,17 @@ html, body {
 }
 
 .dark {
-  /* Default (Female Dark) - Excellent Deep Pink/Berry */
-  --background: 330 60% 10%;
-  --foreground: 330 20% 98%;
-  --primary: 330 100% 70%;
+  /* Default (Female Dark) - Deep Rose Gold / Midnight Blush */
+  --background: 345 40% 6%; /* #1a0f14 approximate */
+  --foreground: 345 20% 98%;
+  --primary: 345 80% 70%;
   --primary-foreground: 0 0% 100%;
-  --card: 330 40% 12%;
-  --card-foreground: 330 20% 98%;
-  --border: 330 30% 25%;
-  --ring: 330 100% 70%;
-  --muted: 330 30% 20%;
-  --muted-foreground: 330 20% 80%;
+  --card: 345 30% 10%;
+  --card-foreground: 345 20% 98%;
+  --border: 345 30% 18%;
+  --ring: 345 80% 70%;
+  --muted: 345 30% 14%;
+  --muted-foreground: 345 20% 75%;
 
   &[data-gender="male"] {
     --primary: 217 100% 65%; /* Vibrant Blue */
@@ -258,6 +253,8 @@ html, body {
     margin: 0;
     padding: 0;
     overflow-x: hidden;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
   }
 }
 
@@ -265,11 +262,15 @@ html, body, #root {
   width: 100%;
   height: 100%;
   margin: 0;
-  font-family: 'Cairo', 'Outfit', sans-serif;
+  font-family: var(--font-arabic);
   line-height: 1.8; /* Academic Spacing: Enhanced for readability */
   letter-spacing: -0.02em; /* Modern academic look */
   overscroll-behavior-y: contain; /* PWA: Native app feel, prevents default bounce */
-  @apply transition-colors duration-700 ease-in-out; /* Ultra-Smooth Winzo Transition */
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+*, *::before, *::after {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 /* Winzo Luxury Utilities */
@@ -279,7 +280,7 @@ html, body, #root {
 }
 
 .winzo-card {
-  @apply backdrop-blur-[50px] bg-white/40 dark:bg-black/40 border border-white/20 dark:border-white/10 rounded-[2.5rem] shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] transition-all duration-700 hover:shadow-[0_16px_48px_0_rgba(31,38,135,0.15)] hover:-translate-y-1;
+  @apply backdrop-blur-3xl bg-white/40 dark:bg-slate-900/40 border border-white/20 dark:border-white/10 rounded-[2.5rem] shadow-xl transition-all duration-700 hover:shadow-2xl hover:-translate-y-1;
 }
 
 .academic-spacing {
@@ -327,6 +328,11 @@ h1, h2, h3, h4, h5, h6 {
   text-shadow: 0 0 12px rgba(255, 255, 255, 0.8), 0 0 20px rgba(255, 255, 255, 0.4);
 }
 
+.font-outfit {
+  font-family: var(--font-english);
+}
+
+
 /* Glassmorphism Navigation */
 .nav-glass {
   @apply sticky top-0 z-50 backdrop-blur-2xl bg-background/70 border-b border-border/50;
@@ -335,4 +341,282 @@ h1, h2, h3, h4, h5, h6 {
 /* Responsive Smart Buttons */
 .btn-smart {
   @apply flex flex-col sm:flex-row items-center justify-center gap-4 w-full sm:w-auto;
+}
+
+@keyframes rgb-glow {
+  0% { box-shadow: 0 0 15px rgba(255, 0, 0, 0.5); border-color: #ff0000; }
+  20% { box-shadow: 0 0 15px rgba(255, 165, 0, 0.5); border-color: #ffa500; }
+  40% { box-shadow: 0 0 15px rgba(255, 255, 0, 0.5); border-color: #ffff00; }
+  60% { box-shadow: 0 0 15px rgba(0, 128, 0, 0.5); border-color: #008000; }
+  80% { box-shadow: 0 0 15px rgba(0, 0, 255, 0.5); border-color: #0000ff; }
+  100% { box-shadow: 0 0 15px rgba(255, 0, 0, 0.5); border-color: #ff0000; }
+}
+
+.btn-rgb {
+  animation: rgb-glow 3s linear infinite !important;
+  background-color: white !important;
+  color: black !important;
+  border: 2px solid transparent !important;
+  box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.1) !important;
+}
+
+.dark .btn-rgb {
+  background-color: #0f172a !important;
+  color: white !important;
+}
+
+@keyframes pulse-slow {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.1); }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 8s ease-in-out infinite;
+}
+
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+@keyframes wave {
+  0%, 100% { background-size: 400% 400%; background-position: 0% 50%; }
+  50% { background-size: 400% 400%; background-position: 100% 50%; }
+}
+
+.animate-wave {
+  animation: wave 15s ease infinite;
+}
+
+/* Neon Glow Utilities */
+.glow-card-blue {
+  box-shadow: 0 20px 50px -10px rgba(37, 99, 235, 0.4), 0 0 20px rgba(37, 99, 235, 0.1);
+}
+
+.glow-card-pink {
+  box-shadow: 0 20px 50px -10px rgba(236, 72, 153, 0.4), 0 0 20px rgba(236, 72, 153, 0.1);
+}
+
+.glow-text-white {
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.5), 0 0 20px rgba(255, 255, 255, 0.2);
+}
+
+.glow-text-blue {
+  text-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+}
+
+.glow-text-pink {
+  text-shadow: 0 0 15px rgba(236, 72, 153, 0.5);
+}
+
+/* --- GITA ACADEMIC ARCHIVE REDESIGN VARIABLES --- */
+html[data-gender="male"][data-mode="dark"] {
+  --bg-primary: #1a0a0f;
+  --bg-secondary: #2d1020;
+  --bg-cards: #3d1530;
+  --accent-primary: #e91e63;
+  --accent-secondary: #ff4081;
+  --accent-tertiary: #c2185b;
+  --text-primary: #ffffff;
+  --text-secondary: #e8b4c8;
+  --text-muted: #9e6b7a;
+  --border-pink: rgba(233, 30, 99, 0.2);
+  --border-color: rgba(233, 30, 99, 0.2);
+  --glass-white: rgba(255, 255, 255, 0.05);
+  --button-gradient: linear-gradient(135deg, #e91e63, #ff4081);
+  --navbar-bg: rgba(45, 16, 32, 0.85);
+  --glow-color: rgba(233, 30, 99, 0.3);
+  --skeleton-base: #2d1020;
+  --skeleton-highlight: #3d1530;
+
+  --hero-gradient: linear-gradient(135deg, #1a0a0f 0%, #3d1530 50%, #1a0a0f 100%);
+  --card-gradient: linear-gradient(145deg, rgba(61,21,48,0.8), rgba(45,16,32,0.9));
+  --navbar-gradient: linear-gradient(180deg, #2d1020 0%, rgba(26,10,15,0.95) 100%);
+
+  /* Shadcn Mappings */
+  --background: 345 40% 6%;
+  --foreground: 0 0% 100%;
+  --card: 345 30% 10%;
+  --card-foreground: 0 0% 100%;
+  --border: 345 30% 18%;
+  --input: 345 30% 18%;
+  --ring: 345 80% 70%;
+  --primary: 345 80% 70%;
+  --primary-foreground: 0 0% 100%;
+  --muted: 345 30% 14%;
+  --muted-foreground: 345 20% 75%;
+  --popover: 345 30% 10%;
+  --popover-foreground: 0 0% 100%;
+}
+
+html[data-gender="male"][data-mode="light"] {
+  --bg-primary: #fdf2f5;
+  --bg-secondary: #fce4ec;
+  --bg-cards: #ffffff;
+  --accent-primary: #c2185b;
+  --accent-secondary: #e91e63;
+  --accent-tertiary: #880e4f;
+  --text-primary: #1a0a0f;
+  --text-secondary: #4a1528;
+  --text-muted: #9e6b7a;
+  --border-pink: rgba(194, 24, 91, 0.2);
+  --border-color: rgba(194, 24, 91, 0.2);
+  --glass-white: rgba(0, 0, 0, 0.05);
+  --button-gradient: linear-gradient(135deg, #c2185b, #e91e63);
+  --navbar-bg: rgba(253, 242, 245, 0.92);
+  --glow-color: rgba(194, 24, 91, 0.3);
+  --skeleton-base: #fce4ec;
+  --skeleton-highlight: #ffffff;
+
+  --hero-gradient: linear-gradient(135deg, #fdf2f5 0%, #ffffff 50%, #fdf2f5 100%);
+  --card-gradient: linear-gradient(145deg, rgba(255,255,255,0.9), rgba(255,255,255,1));
+  --navbar-gradient: linear-gradient(180deg, #fce4ec 0%, rgba(253,242,245,0.95) 100%);
+
+  /* Shadcn Mappings */
+  --background: 345 50% 98%;
+  --foreground: 345 95% 10%;
+  --card: 345 100% 100%;
+  --card-foreground: 345 95% 10%;
+  --border: 345 40% 92%;
+  --input: 345 40% 92%;
+  --ring: 345 75% 60%;
+  --primary: 345 75% 60%;
+  --primary-foreground: 0 0% 100%;
+  --muted: 345 30% 96%;
+  --muted-foreground: 345 40% 35%;
+  --popover: 345 100% 100%;
+  --popover-foreground: 345 95% 10%;
+}
+
+html[data-gender="female"][data-mode="dark"] {
+  --bg-primary: #0a0a1a;
+  --bg-secondary: #0d1035;
+  --bg-cards: #131540;
+  --accent-primary: #7c3aed;
+  --accent-secondary: #a855f7;
+  --accent-tertiary: #6d28d9;
+  --text-primary: #ffffff;
+  --text-secondary: #c4b5fd;
+  --text-muted: #7c6b9e;
+  --border-pink: rgba(124, 58, 237, 0.2);
+  --border-color: rgba(124, 58, 237, 0.2);
+  --glass-white: rgba(255, 255, 255, 0.05);
+  --button-gradient: linear-gradient(135deg, #7c3aed, #a855f7);
+  --navbar-bg: rgba(13, 16, 53, 0.85);
+  --glow-color: rgba(124, 58, 237, 0.3);
+  --skeleton-base: #0d1035;
+  --skeleton-highlight: #131540;
+
+  --hero-gradient: linear-gradient(135deg, #0a0a1a 0%, #131540 50%, #0a0a1a 100%);
+  --card-gradient: linear-gradient(145deg, rgba(19,21,64,0.8), rgba(13,16,53,0.9));
+  --navbar-gradient: linear-gradient(180deg, #0d1035 0%, rgba(10,10,26,0.95) 100%);
+
+  /* Shadcn Mappings */
+  --background: 240 40% 6%;
+  --foreground: 0 0% 100%;
+  --card: 240 30% 10%;
+  --card-foreground: 0 0% 100%;
+  --border: 240 30% 18%;
+  --input: 240 30% 18%;
+  --ring: 250 100% 65%;
+  --primary: 250 100% 65%;
+  --primary-foreground: 0 0% 100%;
+  --muted: 240 30% 14%;
+  --muted-foreground: 240 20% 75%;
+  --popover: 240 30% 10%;
+  --popover-foreground: 0 0% 100%;
+}
+
+html[data-gender="female"][data-mode="light"] {
+  --bg-primary: #f5f3ff;
+  --bg-secondary: #ede9fe;
+  --bg-cards: #ffffff;
+  --accent-primary: #6d28d9;
+  --accent-secondary: #7c3aed;
+  --accent-tertiary: #4c1d95;
+  --text-primary: #0a0a1a;
+  --text-secondary: #2e1065;
+  --text-muted: #7c6b9e;
+  --border-pink: rgba(109, 40, 217, 0.2);
+  --border-color: rgba(109, 40, 217, 0.2);
+  --glass-white: rgba(0, 0, 0, 0.05);
+  --button-gradient: linear-gradient(135deg, #6d28d9, #7c3aed);
+  --navbar-bg: rgba(245, 243, 255, 0.92);
+  --glow-color: rgba(109, 40, 217, 0.3);
+  --skeleton-base: #ede9fe;
+  --skeleton-highlight: #ffffff;
+
+  --hero-gradient: linear-gradient(135deg, #f5f3ff 0%, #ffffff 50%, #f5f3ff 100%);
+  --card-gradient: linear-gradient(145deg, rgba(255,255,255,0.9), rgba(255,255,255,1));
+  --navbar-gradient: linear-gradient(180deg, #ede9fe 0%, rgba(245,243,255,0.95) 100%);
+
+  /* Shadcn Mappings */
+  --background: 250 100% 98%;
+  --foreground: 240 44% 7%;
+  --card: 0 0% 100%;
+  --card-foreground: 240 44% 7%;
+  --border: 250 92% 96%;
+  --input: 250 92% 96%;
+  --ring: 250 100% 65%;
+  --primary: 250 100% 65%;
+  --primary-foreground: 0 0% 100%;
+  --muted: 250 92% 96%;
+  --muted-foreground: 240 20% 75%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 240 44% 7%;
+}
+
+.gita-card {
+  background: var(--card-gradient);
+  background-color: var(--glass-white);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border-pink);
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.3), 0 1px 4px rgba(233,30,99,0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+
+.gita-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 4px 16px rgba(233,30,99,0.2);
+}
+
+.gita-nav {
+  background: var(--navbar-gradient);
+  background-color: rgba(45,16,32,0.85);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(233, 30, 99, 0.15);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+}
+
+.gita-btn-primary {
+  background: var(--button-gradient);
+  color: var(--text-primary);
+  border-radius: 10px;
+  min-height: 44px;
+  transition: transform 0.2s ease;
+}
+.gita-btn-primary:active {
+  transform: scale(0.97);
+}
+
+.gita-glow-active {
+  box-shadow: 0 0 15px rgba(233,30,99,0.4);
+}
+
+.three-background-fallback {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at 20% 50%, 
+    rgba(233, 30, 99, 0.15) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 20%, 
+    rgba(233, 30, 99, 0.1) 0%, transparent 50%),
+    var(--bg-primary);
+  z-index: -1;
+  animation: bgPulse 8s ease-in-out infinite;
+}
+
+@keyframes bgPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
 }

@@ -31,7 +31,8 @@ export const students = mysqlTable('students', {
   googleId: varchar('googleId', { length: 255 }).unique(), // Added for OAuth
   passwordHash: varchar('passwordHash', { length: 255 }), // Made nullable for OAuth users
   fullName: varchar('fullName', { length: 255 }).notNull(),
-  role: mysqlEnum('role', ['student', 'professor', 'admin']).default('student').notNull(),
+  role: mysqlEnum('role', ['student', 'professor', 'moderator', 'admin']).default('student').notNull(),
+  moderatorPermissions: text('moderatorPermissions'), // JSON representation of permissions
   email: varchar('email', { length: 320 }),
   avatarUrl: text("avatarUrl"),
   resetToken: varchar("resetToken", { length: 255 }),
@@ -47,6 +48,12 @@ export const students = mysqlTable('students', {
   deletedAt: timestamp("deletedAt"),
   petals: int("petals").default(0).notNull(),
   verificationStatus: mysqlEnum('verificationStatus', ['PENDING', 'VERIFIED', 'REJECTED']).default('PENDING').notNull(),
+  registrationStatus: mysqlEnum('registrationStatus', ['pending', 'approved', 'rejected', 'suspended']).default('pending').notNull(),
+  isApproved: boolean("isApproved").default(false).notNull(),
+  approvedAt: timestamp("approvedAt"),
+  approvedBy: int("approvedBy"), // ID of admin/moderator
+  rejectionReason: text("rejectionReason"),
+  lastLoginAt: timestamp("lastLoginAt"),
   onboardingCompleted: boolean("onboardingCompleted").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -82,11 +89,19 @@ export const academicFiles = mysqlTable("academicFiles", {
   deletedAt: timestamp("deletedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  status: mysqlEnum("status", ["uploading", "processing", "ready", "failed", "pending", "approved", "rejected", "flagged"]).default("pending").notNull(),
+  approvedAt: timestamp("approvedAt"),
+  approvedBy: int("approvedBy"),
+  rejectedAt: timestamp("rejectedAt"),
+  rejectedBy: int("rejectedBy"),
+  rejectionReason: text("rejectionReason"),
+  failReason: text("failReason"),
 }, (table) => ({
   courseCodeIdx: index("courseCode_idx").on(table.courseCode),
   uploaderIdx: index("uploader_idx").on(table.uploadedByStudentID),
   fileHashIdx: index("fileHash_idx").on(table.fileHash),
   deletedAtIdx: index("deletedAt_idx").on(table.deletedAt),
+  searchIdx: index("idx_academic_files_search").on(table.subject, table.year, table.fileType),
 }));
 
 export type AcademicFile = typeof academicFiles.$inferSelect;
@@ -162,6 +177,37 @@ export type UserCourse = typeof userCourses.$inferSelect;
 export type InsertUserCourse = typeof userCourses.$inferInsert;
 
 /**
+ * Student Courses mapping table
+ */
+export const studentCourses = mysqlTable("studentCourses", {
+  id: int("id").autoincrement().primaryKey(),
+  studentId: varchar("studentId", { length: 50 }).notNull(),
+  courseId: varchar("courseId", { length: 255 }).notNull(),
+  addedAt: timestamp("addedAt").defaultNow().notNull(),
+  semester: varchar("semester", { length: 20 }),
+  academicYear: varchar("academicYear", { length: 20 }),
+}, (table) => ({
+  uniqueMapping: index("student_course_idx").on(table.studentId, table.courseId),
+}));
+
+export type StudentCourse = typeof studentCourses.$inferSelect;
+export type InsertStudentCourse = typeof studentCourses.$inferInsert;
+
+/**
+ * Login Attempts for security
+ */
+export const loginAttempts = mysqlTable("loginAttempts", {
+  id: int("id").autoincrement().primaryKey(),
+  email: varchar("email", { length: 320 }).notNull(),
+  ipAddress: varchar("ipAddress", { length: 45 }),
+  attemptedAt: timestamp("attemptedAt").defaultNow().notNull(),
+  wasSuccessful: boolean("wasSuccessful").notNull(),
+});
+
+export type LoginAttempt = typeof loginAttempts.$inferSelect;
+export type InsertLoginAttempt = typeof loginAttempts.$inferInsert;
+
+/**
  * Semesters tracking table
  */
 export const semesters = mysqlTable("semesters", {
@@ -192,3 +238,38 @@ export const notifications = mysqlTable("notifications", {
 
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = typeof notifications.$inferInsert;
+
+/**
+ * Announcements table for system-wide notices
+ */
+export const announcements = mysqlTable("announcements", {
+  id: int("id").autoincrement().primaryKey(),
+  title: varchar("title", { length: 255 }),
+  content: text("content").notNull(),
+  createdBy: int("createdBy").notNull(),
+  isActive: boolean("isActive").default(true).notNull(),
+  targetAudience: mysqlEnum("targetAudience", ["all", "students", "moderators"]).default("all").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Announcement = typeof announcements.$inferSelect;
+export type InsertAnnouncement = typeof announcements.$inferInsert;
+
+/**
+ * Background jobs for AI analysis
+ */
+export const aiJobs = mysqlTable("aiJobs", {
+  id: int("id").autoincrement().primaryKey(),
+  fileId: int("fileId").notNull(),
+  status: mysqlEnum("status", ["pending", "processing", "completed", "failed"]).default("pending").notNull(),
+  attempts: int("attempts").default(0).notNull(),
+  errorReason: text("errorReason"),
+  lockedAt: timestamp("lockedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  statusIdx: index("status_idx").on(table.status),
+}));
+
+export type AiJob = typeof aiJobs.$inferSelect;
+export type InsertAiJob = typeof aiJobs.$inferInsert;

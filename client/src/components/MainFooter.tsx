@@ -1,8 +1,6 @@
 import { MessageCircle } from "lucide-react";
-import { useGender } from "@/contexts/GenderContext";
 
 export default function MainFooter() {
-  const { genderTheme } = useGender();
   
   return (
     <footer className="relative z-10 max-w-7xl mx-auto px-6 pt-20 pb-10 border-t border-white/5 text-center">

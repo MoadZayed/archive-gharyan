@@ -27,7 +27,7 @@ export default function CommentSection({ fileID }: { fileID: number }) {
 
   return (
     <div className="mt-6 pt-6 border-t border-border/30">
-      <div className="flex items-center gap-2 mb-4 text-primary">
+      <div className="flex items-center gap-2 mb-4 text-primary dark:text-white">
         <MessageSquare size={16} />
         <h4 className="text-xs font-black uppercase tracking-widest">التعليقات والمراجعات</h4>
       </div>
@@ -39,7 +39,7 @@ export default function CommentSection({ fileID }: { fileID: number }) {
             <Loader2 className="animate-spin h-5 w-5 text-muted-foreground/30" />
           </div>
         ) : commentsQuery.data?.length === 0 ? (
-          <p className="text-[10px] text-muted-foreground/50 text-center py-4 font-bold uppercase italic">
+          <p className="text-[10px] text-slate-500 dark:text-white/40 text-center py-4 font-bold uppercase italic">
             لا توجد تعليقات بعد، كن أول من يصحح أو يضيف معلومة.
           </p>
         ) : (
@@ -62,7 +62,7 @@ export default function CommentSection({ fileID }: { fileID: number }) {
                     {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true, locale: ar })}
                   </span>
                 </div>
-                <p className="text-sm text-muted-foreground leading-relaxed pr-8">
+                <p className="text-sm text-slate-700 dark:text-white/80 leading-relaxed pr-8">
                   {comment.text}
                 </p>
               </motion.div>

@@ -1,16 +1,26 @@
 <!doctype html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" data-gender="male" data-mode="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no" />
     <title>GITA - الأرشيف الأكاديمي</title>
     <meta name="description" content="المنصة الرسمية لطلاب كلية تقنية المعلومات لتبادل الملفات الأكاديمية." />
     <meta name="theme-color" content="#1e40af" />
-    
-    <!-- Academic Fonts: Cairo for Arabic, Outfit for English -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.googletagmanager.com https://accounts.google.com; script-src-elem 'self' 'unsafe-inline' https://apis.google.com https://www.googletagmanager.com https://accounts.google.com; script-src-attr 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: http: https:; media-src 'self' data: blob: http: https:; connect-src 'self' http: https: ws: wss:; frame-src 'self' data: blob: http: https: https://accounts.google.com;">
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300..900&family=Outfit:wght@300..900&display=swap" rel="stylesheet">
+    <script>
+      (function() {
+        try {
+          var gender = localStorage.getItem('gita-gender') || 'male';
+          var mode = localStorage.getItem('gita-mode') || 'dark';
+          document.documentElement.setAttribute('data-gender', gender);
+          document.documentElement.setAttribute('data-mode', mode);
+        } catch (e) {}
+      })();
+    </script>
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
@@ -26,18 +36,13 @@
     <meta property="twitter:description" content="المنصة الرسمية لطلاب كلية تقنية المعلومات لتبادل الملفات الأكاديمية." />
     <meta property="twitter:image" content="/social-preview.png" />
 
+
+    <link rel="apple-touch-icon" href="/logo.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="GITA">
     <link rel="icon" href="logo.png">
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;900&family=Outfit:wght@400;500;600;700;900&display=swap" rel="stylesheet" />
-    <style>
-      * {
-        font-family: 'Cairo', 'Outfit', sans-serif;
-      }
-      .font-outfit {
-        font-family: 'Outfit', sans-serif;
-      }
-    </style>
+
   </head>
   <body>
     <div id="root"></div>

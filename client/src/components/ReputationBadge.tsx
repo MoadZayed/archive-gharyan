@@ -1,23 +1,23 @@
 import { Trophy, Star, Crown } from "lucide-react";
 
-export type BadgeTier = "bronze" | "silver" | "gold";
+export type BadgeTier = "bronze" | "gold" | "legendary";
 
 export function getBadgeData(points: number) {
-  if (points >= 200) {
+  if (points >= 25) {
     return {
-      tier: "gold" as BadgeTier,
-      label: "نجم أكاديمي",
-      icon: <Crown className="h-4 w-4 text-amber-500 fill-amber-500/20" />,
-      color: "bg-amber-500/10 text-amber-700 border-amber-200",
+      tier: "legendary" as BadgeTier,
+      label: "مساهم أسطوري",
+      icon: <Crown className="h-4 w-4 text-purple-500 animate-pulse fill-purple-500/20" />,
+      color: "bg-purple-500/10 text-purple-700 border-purple-200 shadow-[0_0_15px_rgba(168,85,247,0.2)]",
       hasCrown: true
     };
   }
-  if (points >= 50) {
+  if (points >= 10) {
     return {
-      tier: "silver" as BadgeTier,
-      label: "مساهم نشط",
-      icon: <Star className="h-4 w-4 text-slate-400 fill-slate-400/20" />,
-      color: "bg-slate-500/10 text-slate-700 border-slate-200",
+      tier: "gold" as BadgeTier,
+      label: "مساهم ذهبي",
+      icon: <Star className="h-4 w-4 text-amber-500 fill-amber-500/20" />,
+      color: "bg-amber-500/10 text-amber-700 border-amber-200",
       hasCrown: false
     };
   }

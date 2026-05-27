@@ -42,8 +42,8 @@ import {
 import { cn } from "@/lib/utils";
 import { COURSES, PROFESSORS } from "@/lib/academicData";
 import { motion, AnimatePresence } from "framer-motion";
-import { useGender } from "@/contexts/GenderContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import StarNotification from "@/components/StarNotification";
 
 import { Progress } from "@/components/ui/progress";
 import axios from "axios";
@@ -55,9 +55,16 @@ export default function Upload() {
   const { user } = useAuth({ redirectOnUnauthenticated: true });
   const { t, i18n } = useTranslation();
   const { theme, toggleTheme } = useTheme();
-  const { genderTheme } = useGender();
 
   useDocumentTitle("رفع ملف");
+
+  const normalizeArabic = (text: string) => {
+    return text
+      .replace(/[أإآ]/g, "ا")
+      .replace(/ة/g, "ه")
+      .replace(/ى/g, "ي")
+      .replace(/[\u064B-\u065F]/g, "");
+  };
 
   // Form States (for auto-fill and review)
   const [fileType, setFileType] = useState("");
@@ -77,30 +84,25 @@ export default function Upload() {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isUploading, setIsUploading] = useState(false);
+  const [starData, setStarData] = useState<{ visible: boolean; count: number }>({ visible: false, count: 0 });
 
-  // 1. Smart Analysis Mutation (Still uses base64 for small payload to AI)
-  const analyzeMutation = trpc.files.analyzeDocument.useMutation({
+  const createIntentMutation = trpc.files.createUploadIntent.useMutation();
+
+  const finalizeMutation = trpc.files.finalizeUpload.useMutation({
     onSuccess: (data) => {
-      setDescription(data.summary || "");
-      setIsAnalyzing(false);
-      setShowReviewModal(true);
-      toast.success(data.summary ? "تم تحليل الصورة بنجاح، يرجى إكمال البيانات يدوياً" : "يرجى إكمال بيانات الملف يدوياً");
-    },
-    onError: (err) => {
-      setIsAnalyzing(false);
-      toast.error(err.message || "فشل التحليل، يمكنك إدخال البيانات يدوياً");
-      setShowReviewModal(true);
-    }
-  });
-
-  const uploadMutation = trpc.files.upload.useMutation({
-    onSuccess: () => {
-      toast.success("تم رفع الملف بنجاح! شكراً لمساهمتك");
-      navigate("/files", { replace: true });
+      if (data.starGained) {
+        setStarData({ visible: true, count: data.newStars });
+        setTimeout(() => {
+          navigate("/files", { replace: true });
+        }, 4000);
+      } else {
+        toast.success("تم رفع الملف بنجاح! شكراً لمساهمتك");
+        navigate("/files", { replace: true });
+      }
     },
     onError: (err) => {
       setIsUploading(false);
-      if (err.message === "DUPLICATE_FILE") {
+      if (err.message === "DUPLICATE_FILE" || err.message.includes("موجود مسبقاً")) {
         toast.success("شكرًا لمبادرتك! 🌟 هذا الملف موجود بالفعل في الأرشيف وتم رفعه مسبقاً من قبل زميل آخر.");
         setShowReviewModal(false);
         setSelectedFile(null);
@@ -129,7 +131,7 @@ export default function Upload() {
     return Object.keys(newErrors).length === 0;
   };
 
-  // 2. Binary Upload with Progress
+  // 2. Binary Upload with Progress via Presigned URL
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -160,7 +162,7 @@ export default function Upload() {
     try {
       let fileToUpload = file;
 
-      // ✅ Image Optimization Logic (CTO Recommendation)
+      // ✅ Image Optimization Logic
       if (file.type.startsWith("image/")) {
         const options = {
           maxSizeMB: 1,
@@ -169,47 +171,55 @@ export default function Upload() {
         };
         try {
           fileToUpload = await imageCompression(file, options);
-          console.log(`Image optimized: ${(file.size / 1024 / 1024).toFixed(2)}MB -> ${(fileToUpload.size / 1024 / 1024).toFixed(2)}MB`);
         } catch (compressionErr) {
           console.error("Image compression failed, proceeding with original file:", compressionErr);
         }
       }
 
-      const formData = new FormData();
-      formData.append("file", fileToUpload);
+      // Compute Hash locally
+      const arrayBuffer = await fileToUpload.arrayBuffer();
+      const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const fileHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
-      const response = await axios.post("/api/upload-binary", formData, {
+      // 1. Get Intent
+      const intent = await createIntentMutation.mutateAsync({
+        fileName: fileToUpload.name,
+        mimeType: fileToUpload.type,
+        fileHash,
+        fileSize: fileToUpload.size
+      });
+
+      // 2. Upload to B2 directly via PUT
+      await axios.put(intent.uploadUrl, fileToUpload, {
+        headers: {
+          'Content-Type': fileToUpload.type,
+        },
         onUploadProgress: (progressEvent) => {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 1));
-          setUploadProgress(percentCompleted);
+          if (progressEvent.total) {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            setUploadProgress(percentCompleted);
+          }
         },
       });
 
-      const data = response.data;
       setUploadedFileData({
-        key: data.key,
-        url: data.url,
-        hash: data.fileHash,
-        size: data.size
+        key: intent.fileKey,
+        url: '', // Not needed, backend will construct it
+        hash: fileHash,
+        size: fileToUpload.size
       });
 
       setIsUploading(false);
-      
-      // AI Strategy: Only analyze images
-      if (file.type.startsWith("image/")) {
-        setIsAnalyzing(true);
-        // Small base64 for AI analysis ONLY
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => {
-          const base64 = (reader.result as string).split(",")[1];
-          analyzeMutation.mutate({ fileData: base64, mimeType: file.type });
-        };
+      setShowReviewModal(true);
+    } catch (err: any) {
+      console.error("Upload Error:", err);
+      if (err.message?.includes("موجود مسبقاً") || err.data?.code === "CONFLICT") {
+         toast.success("هذا الملف موجود بالفعل في الأرشيف وتم رفعه مسبقاً.");
+         setSelectedFile(null);
       } else {
-        setShowReviewModal(true);
+         toast.error(err.message || "فشل رفع الملف");
       }
-    } catch (err) {
-      toast.error("فشل رفع الملف إلى السيرفر");
       setIsUploading(false);
     }
   };
@@ -224,7 +234,7 @@ export default function Upload() {
     setIsUploading(true);
     const courseCode = subject.split(" - ")[0];
 
-    uploadMutation.mutate({
+    finalizeMutation.mutate({
       fileName: selectedFile!.name,
       fileType,
       subject,
@@ -236,7 +246,6 @@ export default function Upload() {
       academicYear,
       lectureNumber: lectureNumber ? parseInt(lectureNumber) : null,
       fileKey: uploadedFileData.key,
-      fileUrl: uploadedFileData.url,
       fileHash: uploadedFileData.hash,
       fileSize: uploadedFileData.size,
       mimeType: selectedFile!.type,
@@ -245,40 +254,34 @@ export default function Upload() {
 
   if (!user) return null;
 
-  const isFemale = genderTheme === 'female';
 
   return (
-    <div className={`min-h-screen flex items-center justify-center p-6 relative overflow-hidden transition-colors duration-1000 ${
-      isFemale ? 'bg-[#fff0f6]' : 'bg-[#020617]'
-    }`} dir="rtl">
-      {/* Background Orbs */}
-      <div className={`fixed top-[-10%] left-[-10%] w-[60%] h-[60%] rounded-full blur-[120px] pointer-events-none opacity-20 ${
-        isFemale ? 'bg-pink-400' : 'bg-blue-600'
-      }`} />
-      <div className={`fixed bottom-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full blur-[120px] pointer-events-none opacity-20 ${
-        isFemale ? 'bg-rose-400' : 'bg-purple-600'
-      }`} />
+    <div className="min-h-screen flex items-center justify-center p-4 md:p-6 relative overflow-hidden transition-colors duration-1000" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }} dir="rtl">
+      {/* Enhanced Theme Lighting with Wave Effect */}
+      <div 
+        className="fixed top-[-15%] left-[-15%] w-[70%] h-[70%] rounded-full blur-[160px] pointer-events-none opacity-20 animate-wave"
+        style={{ backgroundColor: 'var(--accent-primary)' }} 
+      />
+      <div 
+        className="fixed bottom-[-15%] right-[-15%] w-[70%] h-[70%] rounded-full blur-[160px] pointer-events-none opacity-20 animate-wave animation-delay-2000"
+        style={{ backgroundColor: 'var(--accent-secondary)' }}
+      />
+      
+      {/* Additional Glow Accents */}
+      <div 
+        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[40%] h-[40%] rounded-full blur-[180px] pointer-events-none opacity-10"
+        style={{ backgroundColor: 'var(--accent-tertiary)' }}
+      />
 
       <div className="absolute top-8 left-8 z-50 flex gap-2">
         <Button 
           variant="outline" 
           size="icon"
           onClick={() => navigate("/files")} 
-          className={`backdrop-blur-xl border-white/20 rounded-2xl w-12 h-12 flex items-center justify-center transition-all hover:scale-110 active:scale-95 ${
-            isFemale ? 'bg-white/40 text-pink-600 border-pink-100 shadow-pink-500/10' : 'bg-white/5 text-white border-white/10 shadow-blue-500/10'
-          }`}
+          className="backdrop-blur-xl rounded-2xl w-12 h-12 flex items-center justify-center transition-all hover:scale-110 active:scale-95 border-none shadow-[0_10px_30px_rgba(233,30,99,0.2)]"
+          style={{ background: 'var(--button-gradient)', color: 'white' }}
         >
           <ArrowRight size={20} />
-        </Button>
-        <Button 
-          variant="outline" 
-          size="icon" 
-          onClick={toggleTheme} 
-          className={`backdrop-blur-xl border-white/20 rounded-2xl w-12 h-12 ${
-            isFemale ? 'bg-white/40 text-pink-500' : 'bg-white/5 text-white'
-          }`}
-        >
-          {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
         </Button>
       </div>
 
@@ -287,61 +290,73 @@ export default function Upload() {
         animate={{ opacity: 1, scale: 1 }}
         className="w-full max-w-2xl relative z-10"
       >
-        <Card className={`backdrop-blur-3xl border shadow-2xl rounded-[3.5rem] p-10 md:p-16 text-center ${
-          isFemale 
-            ? 'bg-white/60 border-pink-200/50' 
-            : 'bg-white/[0.02] border-white/10 shadow-black/50'
-        }`}>
+        <Card className="backdrop-blur-3xl border shadow-[0_20px_50px_rgba(233,30,99,0.1)] rounded-[2.5rem] md:rounded-[3.5rem] p-8 md:p-16 text-center relative overflow-hidden transition-all duration-700" style={{ backgroundColor: 'var(--bg-cards)', borderColor: 'var(--border-pink)' }}>
+          {/* Decorative Glass Inner Glow */}
+          <div 
+            className="absolute -top-24 -right-24 w-48 h-48 rounded-full blur-3xl opacity-20"
+            style={{ backgroundColor: 'var(--accent-primary)' }}
+          />
+          <StarNotification 
+            isVisible={starData.visible} 
+            stars={starData.count} 
+            onClose={() => setStarData(prev => ({ ...prev, visible: false }))} 
+          />
           {isAnalyzing ? (
             <div className="py-20 flex flex-col items-center">
               <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-                className={`w-24 h-24 rounded-[2.5rem] flex items-center justify-center mb-10 ${
-                  isFemale ? 'bg-pink-500 text-white shadow-lg shadow-pink-500/20' : 'bg-blue-600 text-white'
-                }`}
+                className="w-24 h-24 rounded-[2.5rem] flex items-center justify-center mb-10 shadow-[0_10px_30px_rgba(233,30,99,0.3)]"
+                style={{ background: 'var(--button-gradient)', color: 'white' }}
               >
                 <BrainCircuit size={48} />
               </motion.div>
-              <h2 className={`text-2xl font-black mb-4 ${isFemale ? 'text-pink-600' : 'text-white'}`}>
+              <h2 className="text-2xl font-black mb-4" style={{ color: 'var(--text-primary)' }}>
                 جاري التحليل بالذكاء الاصطناعي...
               </h2>
-              <p className={`text-xs font-bold uppercase tracking-widest ${isFemale ? 'text-pink-400' : 'text-blue-400'}`}>
+              <p className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--accent-primary)' }}>
                 Gemini 1.5 Flash is extracting academic data
               </p>
+              <Button 
+                variant="ghost" 
+                onClick={() => {
+                  setIsAnalyzing(false);
+                  setShowReviewModal(true);
+                }}
+                className="mt-8 font-bold hover:bg-[rgba(233,30,99,0.1)] rounded-2xl min-h-[44px]"
+                style={{ color: 'var(--text-muted)' }}
+              >
+                تجاوز التحليل والتعبئة يدوياً
+              </Button>
             </div>
           ) : (
             <>
               <div className="flex flex-col items-center mb-14">
-                <div className={`w-24 h-24 rounded-[2.5rem] flex items-center justify-center shadow-2xl mb-8 ${
-                  isFemale ? 'bg-pink-500 text-white' : 'bg-blue-600 text-white'
-                }`}>
+                <div className="w-24 h-24 rounded-full flex items-center justify-center shadow-[0_10px_30px_rgba(233,30,99,0.3)] mb-8 transition-transform hover:scale-110" style={{ background: 'var(--button-gradient)', color: 'white' }}>
                   {isUploading ? <Loader2 className="animate-spin" size={44} /> : <UploadIcon size={44} strokeWidth={2.5} />}
                 </div>
-                <h1 className={`text-4xl font-black mb-4 tracking-tighter glow-text-bright ${isFemale ? 'text-pink-600' : 'text-white'}`}>
+                <h1 className="text-3xl md:text-4xl font-black mb-4 tracking-tighter" style={{ color: 'var(--text-primary)' }}>
                   {isUploading ? "جاري الرفع..." : "الرفع الذكي (AI)"}
                 </h1>
                 
                 {isUploading && (
                   <div className="w-full max-w-xs mt-4 space-y-2">
-                    <Progress value={uploadProgress} className="h-2" />
-                    <p className={`text-xs font-black ${isFemale ? 'text-pink-400' : 'text-blue-400'}`}>
+                    <Progress value={uploadProgress} className="h-2" style={{ backgroundColor: 'var(--border-pink)' }} />
+                    <p className="text-xs font-black" style={{ color: 'var(--accent-primary)' }}>
                       {uploadProgress}% اكتمل
                     </p>
                   </div>
                 )}
                 
                 {!isUploading && (
-                  <p className={`font-black text-sm ${isFemale ? 'text-pink-400' : 'text-white/40'}`}>
+                  <p className="font-black text-sm" style={{ color: 'var(--text-muted)' }}>
                     بمجرد اختيار الملف، سنتولى مهمة تعبئة البيانات عنك
                   </p>
                 )}
               </div>
 
               <div className="space-y-8">
-                <label className={`flex flex-col items-center justify-center border-2 border-dashed rounded-[3rem] p-16 cursor-pointer transition-all group relative overflow-hidden ${
-                  isFemale ? 'border-pink-200 bg-pink-50/20 hover:border-pink-400' : 'border-white/10 bg-white/[0.02] hover:border-blue-500/40'
-                }`}>
+                <label className="flex flex-col items-center justify-center border-2 border-dashed rounded-[3rem] p-10 md:p-16 cursor-pointer transition-all group relative overflow-hidden" style={{ backgroundColor: 'rgba(233,30,99,0.05)', borderColor: 'var(--border-pink)' }}>
                   <input 
                     type="file" 
                     onChange={handleFileChange} 
@@ -350,15 +365,13 @@ export default function Upload() {
                     className="hidden" 
                   />
                   <div className="flex flex-col items-center text-center">
-                    <div className={`w-20 h-20 rounded-3xl flex items-center justify-center mb-6 transition-transform group-hover:scale-110 ${
-                      isFemale ? 'bg-pink-100 text-pink-500' : 'bg-white/5 text-white/40'
-                    }`}>
+                    <div className="w-20 h-20 rounded-[2rem] flex items-center justify-center mb-6 transition-transform group-hover:scale-110" style={{ backgroundColor: 'rgba(233,30,99,0.1)', color: 'var(--accent-primary)' }}>
                       <Sparkles size={38} />
                     </div>
-                    <p className={`font-black text-xl mb-2 glow-text ${isFemale ? 'text-pink-600' : 'text-white'}`}>
+                    <p className="font-black text-xl mb-2" style={{ color: 'var(--text-primary)' }}>
                       اختر ملفك الآن
                     </p>
-                    <p className={`text-xs font-bold ${isFemale ? 'text-pink-300' : 'text-white/20'}`}>
+                    <p className="text-xs font-bold" style={{ color: 'var(--text-muted)' }}>
                       PDF, JPG, PNG
                     </p>
                   </div>
@@ -373,34 +386,31 @@ export default function Upload() {
       <Dialog open={showReviewModal} onOpenChange={setShowReviewModal}>
         <DialogContent 
           onPointerDownOutside={(e) => e.preventDefault()}
-          className={`backdrop-blur-3xl border rounded-[3.5rem] max-w-2xl p-10 overflow-y-auto max-h-[90vh] ${
-            isFemale ? 'bg-white/95 border-pink-200 shadow-pink-500/10' : 'bg-black/95 border-white/10'
-          }`} dir="rtl"
+          className="backdrop-blur-3xl border rounded-[3rem] w-[95vw] md:w-full max-w-2xl p-6 md:p-10 overflow-y-auto max-h-[90vh]"
+          style={{ backgroundColor: 'var(--bg-cards)', borderColor: 'var(--border-pink)' }}
+          dir="rtl"
         >
-          <DialogHeader className="items-center mb-10">
-            <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-4 ${
-              isFemale ? 'bg-pink-500 text-white' : 'bg-blue-600 text-white shadow-lg'
-            }`}>
+          <DialogHeader className="items-center mb-8 md:mb-10 mt-6 md:mt-0">
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 shadow-[0_10px_30px_rgba(233,30,99,0.3)]" style={{ background: 'var(--button-gradient)', color: 'white' }}>
               <CheckCircle2 size={32} />
             </div>
-            <DialogTitle className={`text-3xl font-black glow-text-bright ${isFemale ? 'text-pink-600' : 'text-white'}`}>
+            <DialogTitle className="text-2xl md:text-3xl font-black" style={{ color: 'var(--text-primary)' }}>
               مراجعة بيانات الملف
             </DialogTitle>
-            <DialogDescription className="font-bold text-center">
+            <DialogDescription className="font-bold text-center" style={{ color: 'var(--text-muted)' }}>
               يرجى التأكد من دقة البيانات التي استخرجها الذكاء الاصطناعي.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="space-y-6 md:space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
               <div className="space-y-3">
-                <label className={`text-[10px] font-black px-4 uppercase tracking-widest ${isFemale ? 'text-pink-400' : 'text-muted-foreground'}`}>نوع الملف</label>
+                <label className="text-[10px] font-black px-4 uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>نوع الملف</label>
                 <select 
                   value={fileType} 
                   onChange={e => setFileType(e.target.value)}
-                  className={`w-full h-14 bg-white/5 border rounded-2xl px-6 font-bold outline-none ${
-                    isFemale ? 'text-pink-900 border-pink-100' : 'text-white border-white/10'
-                  }`}
+                  className="w-full h-14 border rounded-[14px] px-6 font-bold outline-none"
+                  style={{ backgroundColor: 'var(--glass-white)', borderColor: 'var(--border-pink)', color: 'var(--text-primary)' }}
                 >
                   <option value="" disabled>اختر النوع...</option>
                   <option value="exam_mid">امتحان نصفي</option>
@@ -412,24 +422,31 @@ export default function Upload() {
               </div>
 
               <div className="space-y-3">
-                <label className={`text-[10px] font-black px-4 uppercase tracking-widest ${isFemale ? 'text-pink-400' : 'text-muted-foreground'}`}>اسم المادة</label>
+                <label className="text-[10px] font-black px-4 uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>اسم المادة</label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
                       role="combobox"
                       className={cn(
-                        "w-full h-14 justify-between bg-white/5 border rounded-2xl px-6 font-bold text-right",
-                        !subject && "text-muted-foreground",
-                        isFemale ? "text-pink-900 border-pink-100" : "text-white border-white/10 glow-text"
+                        "w-full h-14 justify-between border rounded-[14px] px-6 font-bold text-right",
+                        !subject && "text-muted-foreground"
                       )}
+                      style={{ backgroundColor: 'var(--glass-white)', borderColor: 'var(--border-pink)', color: 'var(--text-primary)' }}
                     >
                       {subject || "ابحث عن مادة..."}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-card border-border rounded-2xl shadow-2xl overflow-hidden">
-                    <Command className="bg-transparent">
+                    <Command 
+                      className="bg-transparent"
+                      filter={(value, search) => {
+                        const normalizedValue = normalizeArabic(value.toLowerCase());
+                        const normalizedSearch = normalizeArabic(search.toLowerCase());
+                        return normalizedValue.includes(normalizedSearch) ? 1 : 0;
+                      }}
+                    >
                       <CommandInput placeholder="ابحث بكود أو اسم المادة..." className="h-12" />
                       <CommandList className="max-h-60 custom-scrollbar">
                         <CommandEmpty className="p-4 text-xs font-bold text-muted-foreground">لا توجد مادة بهذا الاسم.</CommandEmpty>
@@ -457,31 +474,31 @@ export default function Upload() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
               <div className="space-y-3">
-                <label className={`text-[10px] font-black px-4 uppercase tracking-widest ${isFemale ? 'text-pink-400' : 'text-muted-foreground'}`}>السنة</label>
+                <label className="text-[10px] font-black px-4 uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>السنة</label>
                 <Input 
                   type="number"
                   value={year} 
                   onChange={e => setYear(e.target.value)}
-                  className={`h-14 bg-white/5 border rounded-2xl font-bold ${
-                    isFemale ? 'text-pink-900 border-pink-100' : 'text-white border-white/10'
-                  }`}
+                  className="h-14 border rounded-[14px] font-bold"
+                  style={{ backgroundColor: 'var(--glass-white)', borderColor: 'var(--border-pink)', color: 'var(--text-primary)' }}
                 />
               </div>
 
               <div className="space-y-3">
-                <label className={`text-[10px] font-black px-4 uppercase tracking-widest ${isFemale ? 'text-pink-400' : 'text-muted-foreground'}`}>الفصل</label>
+                <label className="text-[10px] font-black px-4 uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>الفصل</label>
                 <div className="flex gap-4">
                   {['Spring', 'Fall'].map(s => (
                     <button
                       key={s}
                       onClick={() => setSemester(s)}
-                      className={`flex-1 h-14 rounded-2xl font-black text-sm transition-all border ${
-                        semester === s
-                          ? isFemale ? 'bg-pink-500 text-white border-pink-400' : 'bg-blue-600 text-white border-blue-500'
-                          : isFemale ? 'bg-pink-50 text-pink-400 border-pink-100' : 'bg-white/5 text-white/40 border-white/10'
-                      }`}
+                      className="flex-1 h-14 rounded-[14px] font-black text-sm transition-all border"
+                      style={{ 
+                        backgroundColor: semester === s ? 'var(--accent-primary)' : 'var(--glass-white)', 
+                        borderColor: semester === s ? 'var(--accent-primary)' : 'var(--border-pink)',
+                        color: semester === s ? 'white' : 'var(--text-primary)'
+                      }}
                     >
                       {s === 'Spring' ? 'ربيع' : 'خريف'}
                     </button>
@@ -491,24 +508,31 @@ export default function Upload() {
             </div>
 
             <div className="space-y-3">
-              <label className={`text-[10px] font-black px-4 uppercase tracking-widest ${isFemale ? 'text-pink-400' : 'text-muted-foreground'}`}>اسم الدكتور</label>
+              <label className="text-[10px] font-black px-4 uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>اسم الدكتور</label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     role="combobox"
                     className={cn(
-                      "w-full h-14 justify-between bg-white/5 border rounded-2xl px-6 font-bold text-right",
-                      !doctorName && "text-muted-foreground",
-                      isFemale ? "text-pink-900 border-pink-100" : "text-white border-white/10"
+                      "w-full h-14 justify-between border rounded-[14px] px-6 font-bold text-right",
+                      !doctorName && "text-muted-foreground"
                     )}
+                    style={{ backgroundColor: 'var(--glass-white)', borderColor: 'var(--border-pink)', color: 'var(--text-primary)' }}
                   >
                     {doctorName || "ابحث عن دكتور..."}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-card border-border rounded-2xl shadow-2xl overflow-hidden">
-                  <Command className="bg-transparent">
+                  <Command 
+                    className="bg-transparent"
+                    filter={(value, search) => {
+                      const normalizedValue = normalizeArabic(value.toLowerCase());
+                      const normalizedSearch = normalizeArabic(search.toLowerCase());
+                      return normalizedValue.includes(normalizedSearch) ? 1 : 0;
+                    }}
+                  >
                     <CommandInput placeholder="ابحث عن دكتور..." className="h-12" />
                     <CommandList className="max-h-60 custom-scrollbar">
                       <CommandEmpty className="p-4 text-xs font-bold text-muted-foreground">لا يوجد دكتور بهذا الاسم.</CommandEmpty>
@@ -533,13 +557,12 @@ export default function Upload() {
             </div>
 
             <div className="space-y-3">
-              <label className={`text-[10px] font-black px-4 uppercase tracking-widest ${isFemale ? 'text-pink-400' : 'text-muted-foreground'}`}>رقم الشيت / المحاضرة</label>
+              <label className="text-[10px] font-black px-4 uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>رقم الشيت / المحاضرة</label>
               <select 
                 value={lectureNumber} 
                 onChange={e => setLectureNumber(e.target.value)}
-                className={`w-full h-14 bg-white/5 border rounded-2xl px-6 font-bold outline-none ${
-                  isFemale ? 'text-pink-900 border-pink-100' : 'text-white border-white/10'
-                }`}
+                className="w-full h-14 border rounded-[14px] px-6 font-bold outline-none"
+                style={{ backgroundColor: 'var(--glass-white)', borderColor: 'var(--border-pink)', color: 'var(--text-primary)' }}
               >
                 <option value="">غير محدد</option>
                 {Array.from({ length: 15 }, (_, i) => i + 1).map(num => {
@@ -551,19 +574,18 @@ export default function Upload() {
                   );
                 })}
               </select>
-              <p className={`text-[10px] font-bold px-4 ${isFemale ? 'text-pink-400' : 'text-muted-foreground'}`}>
+              <p className="text-[10px] font-bold px-4" style={{ color: 'var(--text-muted)' }}>
                 تلميح: المحاضرات المميزة بالأخضر تم رفعها مسبقاً من قبل زملائك.
               </p>
             </div>
 
             <div className="space-y-3">
-              <label className={`text-[10px] font-black px-4 uppercase tracking-widest ${isFemale ? 'text-pink-400' : 'text-muted-foreground'}`}>السنة الأكاديمية</label>
+              <label className="text-[10px] font-black px-4 uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>السنة الأكاديمية</label>
               <select 
                 value={academicYear} 
                 onChange={e => setAcademicYear(e.target.value)}
-                className={`w-full h-14 bg-white/5 border rounded-2xl px-6 font-bold outline-none ${
-                  isFemale ? 'text-pink-900 border-pink-100' : 'text-white border-white/10'
-                }`}
+                className="w-full h-14 border rounded-[14px] px-6 font-bold outline-none"
+                style={{ backgroundColor: 'var(--glass-white)', borderColor: 'var(--border-pink)', color: 'var(--text-primary)' }}
               >
                 <option value="2023-2024">2023-2024</option>
                 <option value="2024-2025">2024-2025</option>
@@ -573,31 +595,30 @@ export default function Upload() {
             </div>
 
             <div className="space-y-3">
-              <label className={`text-[10px] font-black px-4 uppercase tracking-widest ${isFemale ? 'text-pink-400' : 'text-muted-foreground'}`}>ملخص الملف</label>
+              <label className="text-[10px] font-black px-4 uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>ملخص الملف</label>
               <textarea 
                 value={description} 
                 onChange={e => setDescription(e.target.value)}
-                className={`w-full p-6 h-32 bg-white/5 border rounded-2xl font-bold text-xs resize-none outline-none ${
-                  isFemale ? 'text-pink-900 border-pink-100' : 'text-white/60 border-white/10'
-                }`}
+                className="w-full p-6 h-32 border rounded-[14px] font-bold text-xs resize-none outline-none"
+                style={{ backgroundColor: 'var(--glass-white)', borderColor: 'var(--border-pink)', color: 'var(--text-primary)' }}
               />
             </div>
           </div>
 
-          <DialogFooter className="mt-12 gap-6 sm:flex-col">
+          <DialogFooter className="mt-10 gap-4 sm:flex-col">
             <Button
               onClick={handleFinalSubmit}
               disabled={isUploading}
-              className={`w-full h-20 rounded-[2rem] font-black text-2xl shadow-2xl transition-all hover:scale-[1.02] active:scale-95 glow-text-bright ${
-                isFemale ? 'bg-pink-500 text-white shadow-pink-500/30' : 'bg-blue-600 text-white shadow-blue-500/20'
-              }`}
+              className="w-full h-16 md:h-20 rounded-[2rem] font-black text-xl md:text-2xl shadow-2xl transition-all hover:scale-[1.02] active:scale-95 border-none"
+              style={{ background: 'var(--button-gradient)', color: 'white' }}
             >
               {isUploading ? <Loader2 className="animate-spin" /> : "اعتماد الرفع"}
             </Button>
             <Button
               variant="ghost"
               onClick={() => setShowReviewModal(false)}
-              className={`w-full h-14 font-black rounded-2xl ${isFemale ? 'text-pink-400 hover:bg-pink-50' : 'text-white/30'}`}
+              className="w-full h-12 md:h-14 font-black rounded-2xl hover:bg-[rgba(233,30,99,0.1)] hover:text-[var(--accent-primary)]"
+              style={{ color: 'var(--text-muted)' }}
             >
               إلغاء وإعادة المحاولة
             </Button>

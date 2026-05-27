@@ -13,12 +13,12 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
-import { GenderProvider } from "./contexts/GenderContext";
 import "./lib/i18n";
 
 
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminProtectedRoute from "./components/AdminProtectedRoute";
+import ModeratorProtectedRoute from "./components/ModeratorProtectedRoute";
 import WhatsAppButton from "./components/WhatsAppButton";
 import PageLoader from "./components/PageLoader";
 
@@ -38,7 +38,7 @@ const Leaderboard = lazy(() => import("./pages/Leaderboard"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const Courses = lazy(() => import("./pages/Courses"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
-
+const ModeratorPanel = lazy(() => import("./pages/ModeratorPanel"));
 
 function Router() {
   const { user, loading, refresh } = useAuth();
@@ -86,24 +86,8 @@ function Router() {
     // Admin bypass for student guards
     if (user.isAdmin) return;
 
-    // Route Guard Logic for Students (Onboarding only)
-    const isPublicRoute = ["/", "/login", "/register", "/admin-login", "/forgot-password", "/reset-password", "/privacy"].includes(location);
-    const isOnboarding = location === "/onboarding";
-    
-    let hasCourses = false;
-    try {
-      const courses = typeof user.enrolledCourses === 'string' ? JSON.parse(user.enrolledCourses) : user.enrolledCourses;
-      hasCourses = Array.isArray(courses) && courses.length > 0;
-    } catch {
-      hasCourses = false;
-    }
-
-    // Only force onboarding if logged in student has no courses
-    if (!isPublicRoute && !hasCourses && !isOnboarding) {
-      navigate("/onboarding", { replace: true });
-    } else if (isOnboarding && hasCourses) {
-      navigate("/files", { replace: true });
-    }
+    // The redirection logic has been moved to ProtectedRoute.tsx to prevent conflicts and infinite loops.
+    // App.tsx now only handles global modals like the 30-day semester check.
   }, [user, loading, location, navigate, refresh]);
 
   return (
@@ -160,6 +144,11 @@ function Router() {
               <Admin />
             </AdminProtectedRoute>
           </Route>
+          <Route path="/moderator/panel">
+            <ModeratorProtectedRoute>
+              <ModeratorPanel />
+            </ModeratorProtectedRoute>
+          </Route>
           <Route component={NotFound} />
         </Switch>
       </Suspense>
@@ -198,6 +187,14 @@ function Router() {
 
 import MobileBottomNav from "./components/MobileBottomNav";
 
+function AppContent() {
+  return (
+    <div className="min-h-screen pb-32 md:pb-0 transition-all duration-1000 relative" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
+      <Router />
+    </div>
+  );
+}
+
 function App() {
   const { i18n } = useTranslation();
 
@@ -228,18 +225,14 @@ function App() {
 
   return (
     <GlobalErrorBoundary>
-      <GenderProvider>
         <ThemeProvider defaultTheme="dark" switchable={true}>
           <TooltipProvider>
             <Toaster />
-            <div className="pb-32 md:pb-0">
-              <Router />
-            </div>
+            <AppContent />
             <MobileBottomNav />
             <WhatsAppButton />
           </TooltipProvider>
         </ThemeProvider>
-      </GenderProvider>
     </GlobalErrorBoundary>
   );
 }

@@ -1,8 +1,8 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useTheme } from "@/contexts/ThemeContext";
-import { useGender } from "@/contexts/GenderContext";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import Logo from "@/components/Logo";
 import { 
   Sun, 
@@ -15,7 +15,8 @@ import {
   LogOut,
   Upload,
   CheckCircle2,
-  BookOpen
+  BookOpen,
+  Star
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -24,14 +25,19 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { Menu } from "lucide-react";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const { genderTheme, toggleGender } = useGender();
   const [location, navigate] = useLocation();
-
-  const isFemale = genderTheme === 'female';
 
   const handleLogout = async () => {
     try {
@@ -48,93 +54,141 @@ export default function Navbar() {
   const isVerified = user.verificationStatus === 'VERIFIED' || user.isAdmin;
 
   return (
-    <div className="flex flex-col md:flex-row justify-between items-center mb-16 gap-8">
-      <div className="flex items-center gap-6">
-        <Logo />
-        <div className="hidden md:block">
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2">
-              <span className={`h-2 w-2 rounded-full ${isFemale ? 'bg-pink-500' : 'bg-green-500'}`} />
-              <p className={`font-black ${isFemale ? 'text-pink-900/70' : 'text-muted-foreground'}`}>أهلاً بك، {user.fullName}</p>
-              <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black ${isFemale ? 'bg-pink-100 text-pink-600' : 'bg-blue-500/10 text-blue-400'}`}>
-                {isFemale ? <Flower size={12} /> : <Box size={12} />}
-                <span>{user.petals || 0} {isFemale ? 'بتلة' : 'نقطة'}</span>
-              </div>
-              {user.verificationStatus === 'VERIFIED' && (
-                <span className="text-blue-500 shrink-0" title="حساب موثق">
-                  <CheckCircle2 size={16} fill="currentColor" className="text-white fill-blue-500" />
-                </span>
-              )}
-            </div>
-            {user.verificationStatus === 'PENDING' && (
-              <div className="flex items-center gap-1.5 bg-yellow-500/10 text-yellow-600 px-2 py-0.5 rounded-full text-[9px] font-black w-fit border border-yellow-500/20">
-                <span>قيد المراجعة</span>
-                <span className="animate-pulse">⏳</span>
-              </div>
-            )}
-          </div>
+    <header className="gita-nav fixed top-0 left-0 right-0 h-[56px] md:h-[70px] z-50 flex items-center justify-between px-4 md:px-12 w-full transition-all duration-300" dir="rtl">
+      {/* Right Side: Logo */}
+      <div className="flex items-center gap-3">
+        <div className="h-[36px] w-[36px] md:h-[48px] md:w-[48px] rounded-[12px] md:rounded-[16px] flex items-center justify-center border shadow-[0_0_15px_rgba(233,30,99,0.2)]" style={{ borderColor: 'var(--border-pink)', backgroundColor: 'var(--glass-white)' }}>
+           <Logo />
         </div>
+        <span className="font-bold text-[16px] md:text-[18px] hidden sm:block" style={{ color: 'var(--text-primary)' }}>أرشيف <span style={{ color: 'var(--accent-primary)' }}>GITA</span></span>
       </div>
-      
-      <div className="flex flex-wrap justify-center md:justify-end gap-2 bg-card/40 backdrop-blur-3xl p-3 rounded-[2rem] border border-border/50 shadow-xl w-full md:w-auto">
-        <Button variant="ghost" size="icon" onClick={toggleTheme} className="rounded-xl h-10 w-10">
-          {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
-        </Button>
-        <Button onClick={toggleGender} variant="ghost" size="icon" className={`rounded-xl h-10 w-10 ${isFemale ? 'bg-pink-500 text-white' : ''}`}>
-          {isFemale ? <Flower size={18} /> : <Box size={18} />}
-        </Button>
-        <div className="hidden sm:block w-[1px] h-8 bg-border/50 mx-1 self-center" />
-        
-        <Button onClick={() => navigate("/leaderboard")} variant="outline" className={`rounded-xl border-border/50 flex gap-2 font-black px-3 h-10 text-[10px] ${isFemale ? 'bg-white/50 hover:bg-pink-100 text-pink-900' : ''}`}>
-          <Trophy size={14} />
-          لوحة الصدارة
-        </Button>
 
-        <Button onClick={() => navigate("/my-subjects")} variant="outline" className={`rounded-xl border-border/50 flex gap-2 font-black px-3 h-10 text-[10px] ${location === "/my-subjects" ? "border-primary text-primary" : ""} ${isFemale ? 'bg-white/50 hover:bg-pink-100 text-pink-900' : ''}`}>
-          <BookOpen size={14} />
-          موادي الدراسية
-        </Button>
-        
-        <Button onClick={() => navigate("/profile")} variant="outline" className={`rounded-xl font-black px-3 h-10 text-[10px] ${location === "/profile" ? "border-primary text-primary" : ""}`}>
-          <UserIcon className="h-4 w-4" />
-          بروفيلي
-        </Button>
-        
-        {user.isAdmin && (
-          <Button onClick={() => navigate("/admin")} className="bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-black px-3 h-10 text-[10px]">
-            <ShieldCheck size={14} className="mr-1" />
-            الإدارة
+      {/* Center: Navigation Links (Desktop/Tablet) */}
+      <nav className="hidden md:flex items-center gap-[24px] lg:gap-[32px]">
+        {[
+          { path: "/", label: "الأرشيف الرئيسي" },
+          { path: "/leaderboard", label: "لوحة الصدارة" },
+          { path: "/my-subjects", label: "موادي" },
+        ].map((link) => (
+          <button
+            key={link.path}
+            onClick={() => navigate(link.path)}
+            className="text-[15px] font-medium transition-all relative group"
+            style={{ color: location === link.path ? 'var(--accent-primary)' : 'var(--text-secondary)' }}
+          >
+            {link.label}
+            <span className={`absolute -bottom-2 left-0 right-0 h-[2px] transition-all duration-300 ${location === link.path ? 'bg-[var(--accent-primary)] opacity-100' : 'bg-transparent opacity-0 group-hover:bg-[var(--text-muted)] group-hover:opacity-50'}`} />
+          </button>
+        ))}
+      </nav>
+
+      {/* Left Side: Upload Button & Menu */}
+      <div className="flex items-center gap-4">
+        {/* Desktop Theme Toggle */}
+        <div className="hidden md:block">
+          <ThemeToggle />
+        </div>
+
+        {isVerified ? (
+          <Button 
+            onClick={() => navigate("/upload")}
+            className="hidden md:flex h-[40px] px-6 rounded-full font-bold text-[14px] items-center gap-2 transition-transform hover:scale-105 gita-btn-primary border-none shadow-[0_0_15px_rgba(233,30,99,0.3)]"
+            style={{ background: 'var(--button-gradient)', color: 'white' }}
+          >
+            <Upload size={16} />
+            رفع ملف
           </Button>
+        ) : (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="hidden md:inline-block">
+                  <Button disabled className="h-[40px] px-6 rounded-full font-bold text-[14px] items-center gap-2 opacity-50 bg-[#3d1530] text-white">
+                    <Upload size={16} />
+                    رفع ملف
+                  </Button>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent className="bg-yellow-500 text-white font-bold text-xs border-none">
+                في انتظار الاعتماد
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         )}
 
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="inline-block">
-                <Button 
-                  onClick={() => navigate("/upload")} 
-                  disabled={!isVerified}
-                  className={`rounded-xl font-black px-4 h-10 text-[10px] shadow-lg transition-all ${
-                    isFemale ? 'bg-pink-500 text-white shadow-pink-500/20' : 'bg-primary text-primary-foreground shadow-primary/20'
-                  }`}
-                >
-                  <Upload size={14} className="mr-2" />
-                  رفع ملف
+        <div className="hidden md:flex items-center gap-2 px-3 py-1.5 lg:px-4 lg:py-2 rounded-full border shadow-[0_0_10px_rgba(255,255,255,0.05)]" style={{ backgroundColor: 'var(--bg-cards)', borderColor: 'var(--border-pink)' }}>
+          <Star size={16} className="text-yellow-500 fill-yellow-500" />
+          <span className="text-[14px] font-bold text-white">{user.petals || 0}</span>
+        </div>
+
+        <Sheet>
+          <SheetTrigger asChild>
+             <button className="md:hidden h-[40px] w-[40px] rounded-full flex items-center justify-center transition-all hover:scale-110 shadow-[0_0_10px_rgba(255,255,255,0.05)]" style={{ backgroundColor: 'var(--glass-white)', color: 'var(--text-primary)' }}>
+               <Menu size={20} />
+             </button>
+          </SheetTrigger>
+          <SheetContent side="left" className="w-[300px] sm:w-[400px] border-r shadow-2xl z-[100]" style={{ backgroundColor: 'rgba(26,10,15,0.95)', backdropFilter: 'blur(30px)', borderColor: 'var(--border-pink)' }}>
+            <SheetHeader className="mb-8">
+              <SheetTitle className="text-2xl font-black" style={{ color: 'var(--text-primary)' }}>القائمة الجانبية</SheetTitle>
+            </SheetHeader>
+            
+            <div className="flex flex-col gap-3 h-full">
+              <div className="p-4 rounded-3xl border mb-4" style={{ backgroundColor: 'var(--bg-cards)', borderColor: 'var(--glass-white)' }}>
+                <div className="flex items-center gap-4 mb-4">
+                   <div className="h-12 w-12 rounded-2xl flex items-center justify-center shadow-lg" style={{ background: 'var(--button-gradient)', color: 'white' }}>
+                     <UserIcon size={24} />
+                   </div>
+                  <div>
+                    <p className="font-black text-xl tracking-tight" style={{ color: 'var(--text-primary)' }}>{user.fullName}</p>
+                    <p className="text-xs font-bold" style={{ color: 'var(--text-muted)' }}>{user.studentID}</p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between px-4 py-3 rounded-2xl border shadow-sm" style={{ backgroundColor: 'var(--glass-white)', borderColor: 'var(--border-pink)' }}>
+                  <div className="flex items-center gap-2">
+                    <Star size={14} className="text-yellow-500 fill-yellow-500" />
+                    <span className="text-xs font-black" style={{ color: 'var(--text-secondary)' }}>رصيدك الحالي:</span>
+                  </div>
+                  <span className="text-sm font-black" style={{ color: 'var(--text-primary)' }}>{user.petals || 0} نجمة</span>
+                </div>
+              </div>
+
+              {/* Mobile Theme Toggle */}
+              <div className="px-4 py-2 border-b" style={{ borderColor: 'var(--border-pink)' }}>
+                <ThemeToggle className="w-full justify-between" />
+              </div>
+
+              <div className="space-y-2 mt-2">
+                <Button onClick={() => navigate("/leaderboard")} variant="ghost" className="w-full h-14 justify-start rounded-2xl font-black gap-4 px-6 hover:bg-white/10" style={{ color: 'var(--text-primary)' }}>
+                  <Trophy size={20} className="text-yellow-500" />
+                  لوحة الصدارة
+                </Button>
+                <Button onClick={() => navigate("/my-subjects")} variant="ghost" className="w-full h-14 justify-start rounded-2xl font-black gap-4 px-6 hover:bg-white/10" style={{ color: 'var(--text-primary)' }}>
+                  <BookOpen size={20} className="text-blue-500" />
+                  موادي الدراسية
+                </Button>
+                <Button onClick={() => navigate("/profile")} variant="ghost" className="w-full h-14 justify-start rounded-2xl font-black gap-4 px-6 hover:bg-white/10" style={{ color: 'var(--text-primary)' }}>
+                  <UserIcon size={20} className="text-indigo-500" />
+                  بروفيلي الشخصي
+                </Button>
+                
+                {user.isAdmin && (
+                  <Button onClick={() => navigate("/admin")} className="w-full h-14 justify-start rounded-2xl font-black gap-4 px-6 bg-violet-600/20 text-violet-400 hover:bg-violet-600/30">
+                    <ShieldCheck size={20} />
+                    لوحة الإدارة
+                  </Button>
+                )}
+              </div>
+
+              <div className="mt-auto pb-10">
+                <Button onClick={handleLogout} variant="destructive" className="w-full h-14 rounded-2xl font-black gap-4 shadow-lg shadow-red-500/20">
+                  <LogOut size={20} />
+                  تسجيل الخروج
                 </Button>
               </div>
-            </TooltipTrigger>
-            {!isVerified && (
-              <TooltipContent className="font-black text-[10px] bg-yellow-500 text-white border-none shadow-xl">
-                سيتم تفعيل هذه الميزة فور اعتماد حسابك من قبل الإدارة
-              </TooltipContent>
-            )}
-          </Tooltip>
-        </TooltipProvider>
-        
-        <Button onClick={handleLogout} variant="destructive" className="rounded-xl h-10 w-10">
-          <LogOut size={18} />
-        </Button>
+            </div>
+          </SheetContent>
+        </Sheet>
       </div>
-    </div>
+    </header>
   );
 }

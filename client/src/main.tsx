@@ -53,9 +53,14 @@ queryClient.getMutationCache().subscribe((event) => {
   }
 });
 
-const trpcUrl = import.meta.env.PROD 
-  ? `${import.meta.env.VITE_API_URL}/api/trpc`
-  : 'http://localhost:4001/api/trpc';
+const getTrpcUrl = () => {
+  if (import.meta.env.PROD && import.meta.env.VITE_API_URL) {
+    return `${import.meta.env.VITE_API_URL}/api/trpc`;
+  }
+  return '/api/trpc';
+};
+
+const trpcUrl = getTrpcUrl();
 
 const trpcClient = trpc.createClient({
   links: [

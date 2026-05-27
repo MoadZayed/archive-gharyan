@@ -16,21 +16,31 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
   return bcryptjs.compare(password, hash);
 }
 
-export function generateToken(studentID: string, studentDbId: number | string, role: string = 'student', expiresIn: string = "180d"): string {
-  return jwt.sign({ studentID, studentDbId, role }, JWT_SECRET_SAFE, {
-    expiresIn,
-  } as jwt.SignOptions);
+// moderatorPermissions is now embedded in the token so ctx.student can read it server-side
+export function generateToken(
+  studentID: string,
+  studentDbId: number | string,
+  role: string = 'student',
+  expiresIn: string = "180d",
+  moderatorPermissions?: string | null
+): string {
+  const payload: any = { studentID, studentDbId, role };
+  if (moderatorPermissions) {
+    payload.moderatorPermissions = moderatorPermissions;
+  }
+  return jwt.sign(payload, JWT_SECRET_SAFE, { expiresIn } as jwt.SignOptions);
 }
 
 export function verifyToken(
   token: string
-): { studentID: string; studentDbId: number | string; role: string } | null {
+): { studentID: string; studentDbId: number | string; role: string; moderatorPermissions?: string } | null {
   try {
     const result = jwt.verify(token, JWT_SECRET_SAFE) as any;
     return {
       studentID: result.studentID,
       studentDbId: result.studentDbId,
-      role: result.role || 'student'
+      role: result.role || 'student',
+      moderatorPermissions: result.moderatorPermissions || null,
     };
   } catch {
     return null;
