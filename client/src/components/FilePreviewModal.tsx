@@ -5,8 +5,9 @@ import {
   DialogTitle as ShadcnDialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Download, Eye, FileWarning, Maximize2, ZoomIn, ZoomOut } from "lucide-react";
+import { Download, Eye, FileWarning, Maximize2, ZoomIn, ZoomOut, Loader2 } from "lucide-react";
 import { useState } from "react";
+import { trpc } from "@/lib/trpc";
 
 interface FilePreviewModalProps {
   isOpen: boolean;
@@ -22,6 +23,41 @@ interface FilePreviewModalProps {
 
 export default function FilePreviewModal({ isOpen, onClose, file, onDownload }: FilePreviewModalProps) {
   const [zoom, setZoom] = useState(1);
+  const [downloading, setDownloading] = useState(false);
+  const [downloadErr, setDownloadErr] = useState<string | null>(null);
+  const downloadMutation = trpc.files.download.useMutation();
+
+  const handleDownloadWrapper = async () => {
+    if (!file) return;
+    setDownloading(true);
+    setDownloadErr(null);
+    try {
+      const res = await downloadMutation.mutateAsync({ fileId: file.id });
+      if (!res.url) throw new Error("لا يوجد رابط متاح");
+      
+      const isIOS = /iP(hone|od|ad)/.test(navigator.platform) || (navigator.maxTouchPoints > 1 && /Mac/.test(navigator.platform));
+      if (isIOS) {
+        window.open(res.url, "_blank", "noopener,noreferrer");
+        // Fallback if blocked
+        setTimeout(() => {
+          if (document.hidden) return; 
+          window.location.href = res.url;
+        }, 300);
+      } else {
+        const a = document.createElement("a");
+        a.href = res.url;
+        a.rel = "noreferrer";
+        a.download = res.fileName || file.fileName;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
+    } catch (e: any) {
+      setDownloadErr(e?.message ?? "فشل التحميل، حاول مرة أخرى");
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   if (!file) return null;
 
@@ -51,14 +87,31 @@ export default function FilePreviewModal({ isOpen, onClose, file, onDownload }: 
               </ShadcnDialogTitle>
             </div>
             <Button 
-              onClick={onDownload}
-              className="shrink-0 rounded-xl font-bold flex gap-2 border-none text-white shadow-lg"
+              onClick={handleDownloadWrapper}
+              disabled={downloading}
+              className="shrink-0 rounded-xl font-bold flex gap-2 border-none text-white shadow-lg disabled:opacity-70"
               style={{ background: 'var(--button-gradient)' }}
             >
-              <Download size={18} />
-              تحميل الملف
+              {downloading ? <Loader2 className="animate-spin" size={18} /> : <Download size={18} />}
+              {downloading ? "جاري التجهيز..." : "تحميل الملف"}
             </Button>
           </div>
+          {downloadErr && (
+            <div className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-sm text-center">
+              <p className="text-red-500 font-bold mb-3">{downloadErr}</p>
+              <Button 
+                variant="outline" 
+                onClick={handleDownloadWrapper}
+                disabled={downloading}
+                className="text-red-500 border-red-500/30 hover:bg-red-500/20 font-bold disabled:opacity-70"
+              >
+                إعادة المحاولة
+              </Button>
+            </div>
+          )}
+          <p className="mt-2 text-xs font-bold opacity-70 text-[var(--text-muted)]">
+            ملاحظة: رابط التحميل مؤقت وقد ينتهي. إذا فشل التحميل اضغط "تحميل" مرة أخرى.
+          </p>
         </ShadcnDialogHeader>
 
         <div className="flex-1 bg-muted/30 relative overflow-auto flex items-center justify-center p-4">
@@ -85,9 +138,9 @@ export default function FilePreviewModal({ isOpen, onClose, file, onDownload }: 
               <p className="text-muted-foreground font-bold mb-8">
                 هذا النوع من الملفات يتطلب التنزيل المباشر ليتم عرضه على جهازك.
               </p>
-              <Button onClick={onDownload} size="lg" className="w-full rounded-2xl h-14 font-black text-lg gap-3">
-                <Download size={24} />
-                تحميل الملف
+              <Button onClick={handleDownloadWrapper} disabled={downloading} size="lg" className="w-full rounded-2xl h-14 font-black text-lg gap-3 disabled:opacity-70">
+                {downloading ? <Loader2 className="animate-spin" size={24} /> : <Download size={24} />}
+                {downloading ? "جاري تجهيز الرابط..." : "تحميل الملف"}
               </Button>
             </div>
           )}

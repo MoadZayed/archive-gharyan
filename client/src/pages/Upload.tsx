@@ -84,6 +84,8 @@ export default function Upload() {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadStage, setUploadStage] = useState<"idle" | "hashing" | "intent" | "uploading" | "finalizing">("idle");
+  const [duplicateMsg, setDuplicateMsg] = useState<string | null>(null);
   const [starData, setStarData] = useState<{ visible: boolean; count: number }>({ visible: false, count: 0 });
 
   const createIntentMutation = trpc.files.createUploadIntent.useMutation();
@@ -155,9 +157,11 @@ export default function Upload() {
       return;
     }
 
+    setDuplicateMsg(null);
     setSelectedFile(file);
     setUploadProgress(0);
     setIsUploading(true);
+    setUploadStage("hashing");
     
     try {
       let fileToUpload = file;
@@ -183,6 +187,7 @@ export default function Upload() {
       const fileHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
       // 1. Get Intent
+      setUploadStage("intent");
       const intent = await createIntentMutation.mutateAsync({
         fileName: fileToUpload.name,
         mimeType: fileToUpload.type,
@@ -191,6 +196,7 @@ export default function Upload() {
       });
 
       // 2. Upload to B2 directly via PUT
+      setUploadStage("uploading");
       await axios.put(intent.uploadUrl, fileToUpload, {
         headers: {
           'Content-Type': fileToUpload.type,
@@ -215,12 +221,13 @@ export default function Upload() {
     } catch (err: any) {
       console.error("Upload Error:", err);
       if (err.message?.includes("موجود مسبقاً") || err.data?.code === "CONFLICT") {
-         toast.success("هذا الملف موجود بالفعل في الأرشيف وتم رفعه مسبقاً.");
+         setDuplicateMsg(err.message || "هذا الملف موجود مسبقاً في الأرشيف وتم رفعه من قبل زميل آخر. شكراً لمبادرتك!");
          setSelectedFile(null);
       } else {
          toast.error(err.message || "فشل رفع الملف");
       }
       setIsUploading(false);
+      setUploadStage("idle");
     }
   };
 
@@ -232,6 +239,7 @@ export default function Upload() {
     }
 
     setIsUploading(true);
+    setUploadStage("finalizing");
     const courseCode = subject.split(" - ")[0];
 
     finalizeMutation.mutate({
@@ -336,7 +344,12 @@ export default function Upload() {
                   {isUploading ? <Loader2 className="animate-spin" size={44} /> : <UploadIcon size={44} strokeWidth={2.5} />}
                 </div>
                 <h1 className="text-3xl md:text-4xl font-black mb-4 tracking-tighter" style={{ color: 'var(--text-primary)' }}>
-                  {isUploading ? "جاري الرفع..." : "الرفع الذكي (AI)"}
+                  {isUploading ? (
+                    uploadStage === "hashing" ? "جاري فحص الملف..." :
+                    uploadStage === "intent" ? "تجهيز الرفع..." :
+                    uploadStage === "uploading" ? "جاري الرفع..." :
+                    uploadStage === "finalizing" ? "جاري الاعتماد..." : "جاري العمل..."
+                  ) : "الرفع الذكي (AI)"}
                 </h1>
                 
                 {isUploading && (
@@ -348,10 +361,23 @@ export default function Upload() {
                   </div>
                 )}
                 
-                {!isUploading && (
+                {!isUploading && !duplicateMsg && (
                   <p className="font-black text-sm" style={{ color: 'var(--text-muted)' }}>
                     بمجرد اختيار الملف، سنتولى مهمة تعبئة البيانات عنك
                   </p>
+                )}
+
+                {duplicateMsg && (
+                  <div className="mt-6 rounded-2xl border border-amber-400/40 bg-amber-500/10 p-4 text-sm max-w-sm w-full text-center">
+                    <p className="font-bold text-amber-500 mb-3">{duplicateMsg}</p>
+                    <Button
+                      variant="outline"
+                      onClick={() => navigate("/files")}
+                      className="text-amber-500 border-amber-500/30 hover:bg-amber-500/20 font-bold"
+                    >
+                      اذهب للأرشيف للبحث عن الملف
+                    </Button>
+                  </div>
                 )}
               </div>
 
@@ -612,7 +638,7 @@ export default function Upload() {
               className="w-full h-16 md:h-20 rounded-[2rem] font-black text-xl md:text-2xl shadow-2xl transition-all hover:scale-[1.02] active:scale-95 border-none"
               style={{ background: 'var(--button-gradient)', color: 'white' }}
             >
-              {isUploading ? <Loader2 className="animate-spin" /> : "اعتماد الرفع"}
+              {isUploading ? <Loader2 className="animate-spin mx-auto" /> : "اعتماد الرفع"}
             </Button>
             <Button
               variant="ghost"
