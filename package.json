@@ -13,7 +13,10 @@
     "check": "tsc --noEmit",
     "start:pm2": "pm2 start ecosystem.config.cjs",
     "stop:pm2": "pm2 stop gita-server",
-    "logs": "pm2 logs gita-server"
+    "logs": "pm2 logs gita-server",
+    "clean:orphans": "tsx server/jobs/cleanOrphans.ts",
+    "clean:orphans:dry": "cross-env DRY_RUN=true tsx server/jobs/cleanOrphans.ts",
+    "b2:cors": "node --env-file=.env scripts/set-b2-cors.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.712.0",
