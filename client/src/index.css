@@ -41,26 +41,37 @@ input:-webkit-autofill:active {
 
 /* Dropdown overlays need solid background to prevent transparency */
 [data-radix-select-content],
-[data-radix-popover-content] {
-  background-color: var(--bg-cards, white) !important;
-  color: var(--text-primary, #0f172a) !important;
+[data-radix-popover-content],
+[data-radix-dropdown-menu-content] {
+  background-color: #ffffff !important;
+  color: #1a1a1a !important;
   opacity: 1 !important;
-  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.1)) !important;
+  border: 1px solid #e5e7eb !important;
 }
 
 /* Ensure items inside are readable */
 [role="option"],
 [data-radix-collection-item],
 .command-item,
-[data-radix-select-item] {
+[data-radix-select-item],
+[data-radix-dropdown-menu-item] {
   background-color: transparent !important;
-  color: inherit !important;
+  color: #1a1a1a !important;
+  cursor: pointer !important;
 }
 
 [role="option"]:hover,
 [data-radix-collection-item][data-highlighted],
-.command-item[data-selected="true"] {
-  background-color: var(--glass-white, rgba(0,0,0,0.05)) !important;
+.command-item[data-selected="true"],
+[data-radix-select-item][data-highlighted],
+[data-radix-dropdown-menu-item][data-highlighted] {
+  background-color: #f3f4f6 !important;
+  color: var(--primary, #1a1a1a) !important;
+}
+
+select option {
+  background-color: #ffffff !important;
+  color: #1a1a1a !important;
 }
 
 html, body {
