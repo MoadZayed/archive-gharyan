@@ -10,7 +10,7 @@ export default function WhatsAppButton() {
   const whatsappUrl = `https://wa.me/${phoneNumber}?text=${message}`;
 
   return (
-    <div className="fixed bottom-24 right-4 md:right-8 z-40 flex flex-col items-end gap-2 group">
+    <div className="fixed bottom-32 md:bottom-24 right-4 md:right-8 z-40 flex flex-col items-end gap-2 group">
       {/* Minimize Toggle Button */}
       <button 
         onClick={() => setIsMinimized(!isMinimized)}

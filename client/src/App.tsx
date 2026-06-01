@@ -189,7 +189,7 @@ import MobileBottomNav from "./components/MobileBottomNav";
 
 function AppContent() {
   return (
-    <main className="min-h-screen pb-32 md:pb-0 transition-all duration-1000 relative" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
+    <main className="min-h-screen pb-[120px] md:pb-0 pt-[env(safe-area-inset-top)] transition-all duration-1000 relative" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
       <Router />
     </main>
   );

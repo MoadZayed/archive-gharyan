@@ -24,7 +24,7 @@ export default function StarNotification({ isVisible, onClose, stars }: StarNoti
           initial={{ opacity: 0, y: 50, scale: 0.3, rotateX: 45 }}
           animate={{ opacity: 1, y: 0, scale: 1, rotateX: 0 }}
           exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
-          className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] perspective-1000"
+          className="fixed bottom-32 md:bottom-10 left-1/2 -translate-x-1/2 z-[100] perspective-1000"
         >
           <div className="relative p-8 rounded-[2.5rem] backdrop-blur-2xl border-2 flex flex-col items-center gap-4 text-center min-w-[320px]" style={{ backgroundColor: 'var(--bg-cards)', borderColor: 'var(--border-pink)', boxShadow: '0 20px 50px rgba(233,30,99,0.3)' }}>
             {/* 3D Animated Star */}
