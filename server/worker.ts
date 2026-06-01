@@ -116,9 +116,12 @@ async function processNextJob() {
     console.log(`✅ [AI Worker] Successfully processed file ${file.id}`);
 
   } catch (err: any) {
-    console.error("❌ [AI Worker Error]:", err);
-    // Might need retry logic, but for simplicity, mark failed if attempts > 3
-    // In a real app we'd get the job back
+    const isNetworkError = err.cause && ["ECONNRESET", "ENOTFOUND", "ETIMEDOUT", "HANDSHAKE_SSL_ERROR"].includes(err.cause.code);
+    if (isNetworkError || err.code === "ECONNREFUSED") {
+      console.warn(`⚠️ [AI Worker] Database connection unavailable (${err.cause?.code || err.code}). Retrying...`);
+    } else {
+      console.error("❌ [AI Worker Error]:", err);
+    }
   }
 }
 

@@ -281,9 +281,6 @@ export const authRouter = router({
 
       // Check registration status BEFORE marking successful login
       const regStatus = (student as any).registrationStatus;
-      if (regStatus === "pending") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "طلب تسجيلك قيد المراجعة، يرجى الانتظار حتى تتم الموافقة عليه" });
-      }
       if (regStatus === "rejected") {
         throw new TRPCError({ code: "FORBIDDEN", message: `تم رفض طلب تسجيلك: ${(student as any).rejectionReason || "بدون سبب مسجل"}` });
       }
@@ -933,6 +930,11 @@ export const appRouter = router({
         const dupCheck = await getFileByHash(input.fileHash);
         if (dupCheck) {
           throw new TRPCError({ code: "CONFLICT", message: "هذا الملف موجود مسبقاً في الأرشيف" });
+        }
+
+        const student = await getStudentByDbId(ctx.student.studentDbId as number);
+        if (student?.registrationStatus !== 'approved' && !ctx.student.isAdmin) {
+          throw new TRPCError({ code: "UNAUTHORIZED", message: "سيتم تفعيل ميزة رفع الملفات بعد موافقة الإدارة على حسابك." });
         }
 
         const safePrefix = `uploads/${ctx.student.studentDbId}/`;

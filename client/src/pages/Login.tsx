@@ -8,7 +8,7 @@ import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useTranslation } from "react-i18next";
-import { ShieldCheck, Loader2, Sun, Moon, ArrowRight, Lock, Flower, Box, Sparkles } from "lucide-react";
+import { ShieldCheck, Loader2, Sun, Moon, ArrowRight, Lock, Flower, Box, Sparkles, Eye, EyeOff } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Footer from "@/components/Footer";
 
@@ -20,6 +20,7 @@ export default function Login() {
 
   const [studentID, setStudentID] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const loginMutation = trpc.auth.login.useMutation({
     onSuccess: async (data) => {
@@ -115,12 +116,20 @@ export default function Login() {
             </div>
             <div className="relative">
               <Lock className="absolute right-5 top-1/2 -translate-y-1/2 h-5 w-5" style={{ color: 'var(--text-muted)' }} />
+              <button 
+                type="button" 
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute left-5 top-1/2 -translate-y-1/2 transition-colors hover:text-[var(--accent-primary)] focus:outline-none"
+                style={{ color: 'var(--text-muted)' }}
+              >
+                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </button>
               <Input 
-                type="password" 
+                type={showPassword ? "text" : "password"}
                 value={password} 
                 onChange={(e) => setPassword(e.target.value)} 
                 placeholder="••••••••" 
-                className="h-[52px] pr-12 rounded-2xl font-bold transition-all border outline-none focus:ring-0 text-right"
+                className="h-[52px] pr-12 pl-12 rounded-2xl font-bold transition-all border outline-none focus:ring-0 text-right"
                 style={{ backgroundColor: 'var(--glass-white)', borderColor: 'var(--border-pink)', color: 'var(--text-primary)' }}
                 onFocus={(e) => e.target.style.boxShadow = '0 0 0 3px rgba(233,30,99,0.3)'}
                 onBlur={(e) => e.target.style.boxShadow = 'none'}

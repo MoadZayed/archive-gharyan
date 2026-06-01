@@ -4,6 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import { fileURLToPath } from "url";
 import { VitePWA } from "vite-plugin-pwa";
+import { visualizer } from "rollup-plugin-visualizer";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename).replace(/\\/g, "/");
@@ -12,6 +13,7 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
+    visualizer({ filename: "stats.json", template: "raw-data", gzipSize: true, brotliSize: true }),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'logo.png', 'social-preview.png'],
@@ -76,33 +78,16 @@ export default defineConfig({
     chunkSizeWarningLimit: 2000, // رفع الحد لـ 2MB لضمان بناء نظيف تماماً في Vercel
     rollupOptions: {
       output: {
-        manualChunks(id) {
-          if (id.includes('node_modules')) {
-            if (id.includes('/react/') || id.includes('/react-dom/') || 
-                id.includes('/react-is/') || id.includes('/scheduler/')) {
-              return 'vendor-react'
-            }
-            if (id.includes('/@trpc/') || 
-                id.includes('/@tanstack/')) {
-              return 'vendor-query'
-            }
-            if (id.includes('/recharts/') || 
-                id.includes('/d3-') || 
-                id.includes('/victory-')) {
-              return 'vendor-charts'
-            }
-            if (id.includes('/framer-motion/')) {
-              return 'vendor-animation'
-            }
-            if (id.includes('/lucide-react/')) {
-              return 'vendor-icons'
-            }
-            if (id.includes('/@react-oauth/') || 
-                id.includes('/google-auth/')) {
-              return 'vendor-oauth'
-            }
-            return 'vendor-core'
-          }
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'wouter'],
+          'ui-vendor': [
+            '@radix-ui/react-select', 
+            '@radix-ui/react-dialog', 
+            '@radix-ui/react-popover'
+          ],
+          'animation': ['framer-motion'],
+          'charts': ['recharts'],
+          'query-trpc': ['@tanstack/react-query', '@trpc/client', '@trpc/react-query']
         }
       }
     }

@@ -31,7 +31,8 @@ export default function MobileBottomNav() {
                 animate={{ y: [0, -5, 0] }}
                 transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
                 onClick={() => navigate(item.path)}
-                className="w-[60px] h-[60px] rounded-full flex items-center justify-center shadow-[0_10px_20px_rgba(233,30,99,0.4)] relative"
+                onTouchStart={(e) => e.stopPropagation()}
+                className="w-14 h-14 rounded-full flex items-center justify-center shadow-[0_10px_20px_rgba(233,30,99,0.4)] relative"
                 style={{ background: 'var(--button-gradient)', color: 'white' }}
               >
                 <div className="absolute inset-0 rounded-full border border-white/20"></div>
@@ -52,7 +53,7 @@ export default function MobileBottomNav() {
               className="transition-all duration-300"
               style={{ color: isActive ? 'var(--accent-primary)' : 'var(--text-muted)' }} 
             />
-            <span className="text-[10px] font-bold tracking-tight mt-1" style={{ color: isActive ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+            <span className="text-xs font-medium tracking-tight mt-1" style={{ color: isActive ? 'var(--accent-primary)' : '#9ca3af' }}>
               {item.label}
             </span>
             {isActive && (

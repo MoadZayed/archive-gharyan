@@ -14,7 +14,7 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
       >
         <button
           onClick={() => setGender("male")}
-          className={`flex items-center justify-center w-8 h-8 rounded-full transition-all duration-300 ${gender === "male" ? "shadow-md scale-105" : "opacity-60 hover:opacity-100"}`}
+          className={`flex items-center justify-center w-11 h-11 rounded-full transition-all duration-300 ${gender === "male" ? "shadow-md scale-105" : "opacity-60 hover:opacity-100"}`}
           style={{ 
             backgroundColor: gender === "male" ? "var(--accent-primary)" : "transparent",
             color: gender === "male" ? "white" : "var(--text-primary)"
@@ -29,7 +29,7 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
         </button>
         <button
           onClick={() => setGender("female")}
-          className={`flex items-center justify-center w-8 h-8 rounded-full transition-all duration-300 ${gender === "female" ? "shadow-md scale-105" : "opacity-60 hover:opacity-100"}`}
+          className={`flex items-center justify-center w-11 h-11 rounded-full transition-all duration-300 ${gender === "female" ? "shadow-md scale-105" : "opacity-60 hover:opacity-100"}`}
           style={{ 
             backgroundColor: gender === "female" ? "var(--accent-primary)" : "transparent",
             color: gender === "female" ? "white" : "var(--text-primary)"
@@ -49,7 +49,7 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
       {/* Dark/Light Mode Toggle */}
       <button
         onClick={toggleMode}
-        className="flex items-center justify-center w-10 h-10 rounded-full border shadow-sm transition-all duration-300 hover:scale-105 active:scale-95"
+        className="flex items-center justify-center w-11 h-11 rounded-full border shadow-sm transition-all duration-300 hover:scale-105 active:scale-95"
         style={{ 
           backgroundColor: "var(--glass-white)", 
           borderColor: "var(--border-pink)",

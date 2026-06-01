@@ -32,7 +32,7 @@ export default function Home() {
       <div className="three-background-fallback" />
 
       {/* Floating Theme Toggle */}
-      <ThemeToggle className="fixed top-4 left-4 z-50" />
+      <ThemeToggle className="fixed top-4 left-4 z-[100]" />
 
       <header className="relative z-50 flex items-center justify-between px-4 md:px-12 py-8 w-full max-w-none mx-auto" dir="ltr">
         <div></div>
@@ -63,7 +63,10 @@ export default function Home() {
             <motion.button
               whileHover={{ scale: 1.05, y: -5 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => navigate("/register")}
+              onClick={() => {
+                window.scrollTo(0, 0);
+                navigate("/register");
+              }}
               className="relative group px-12 md:px-16 py-4 md:py-6 rounded-[2rem] font-black text-[18px] md:text-xl transition-all duration-500 overflow-hidden shadow-[0_10px_30px_rgba(233,30,99,0.3)] border-none w-full sm:w-auto min-h-[56px]"
               style={{ background: 'var(--button-gradient)' }}
             >
@@ -75,7 +78,10 @@ export default function Home() {
             <motion.button
               whileHover={{ scale: 1.05, y: -5 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => navigate("/login")}
+              onClick={() => {
+                window.scrollTo(0, 0);
+                navigate("/login");
+              }}
               className="px-10 md:px-12 py-4 md:py-6 rounded-[2rem] font-black text-[18px] md:text-xl transition-all duration-500 border-2 backdrop-blur-xl w-full sm:w-auto min-h-[56px]"
               style={{ borderColor: 'var(--border-pink)', color: 'var(--text-primary)', backgroundColor: 'var(--glass-white)' }}
             >

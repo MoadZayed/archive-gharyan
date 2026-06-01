@@ -120,6 +120,7 @@ export default function FilePreviewModal({ isOpen, onClose, file, onDownload }: 
               <img 
                 src={absoluteUrl} 
                 alt={file.fileName} 
+                loading="lazy"
                 className="max-w-full max-h-full rounded-lg shadow-2xl"
               />
             </div>

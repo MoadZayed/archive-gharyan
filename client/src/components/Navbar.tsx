@@ -54,17 +54,16 @@ export default function Navbar() {
   const isVerified = user.verificationStatus === 'VERIFIED' || user.isAdmin;
 
   return (
-    <header className="gita-nav fixed top-0 left-0 right-0 h-[56px] md:h-[70px] z-50 flex items-center justify-between px-4 md:px-12 w-full transition-all duration-300" dir="rtl">
-      {/* Right Side: Logo */}
-      <div className="flex items-center gap-3">
-        <div className="h-[36px] w-[36px] md:h-[48px] md:w-[48px] rounded-[12px] md:rounded-[16px] flex items-center justify-center border shadow-[0_0_15px_rgba(233,30,99,0.2)]" style={{ borderColor: 'var(--border-pink)', backgroundColor: 'var(--glass-white)' }}>
-           <Logo />
+    <header className="gita-nav fixed top-0 left-0 right-0 z-50 flex flex-col w-full transition-all duration-300" style={{ backgroundColor: 'rgba(26,10,15,0.85)', backdropFilter: 'blur(20px)' }} dir="rtl">
+      {/* Top Row */}
+      <div className="h-[64px] lg:h-[70px] flex items-center justify-between px-4 lg:px-8 w-full">
+        {/* Right Side: Logo */}
+        <div className="flex items-center">
+             <Logo className="scale-75 sm:scale-90 lg:scale-100 origin-right" />
         </div>
-        <span className="font-bold text-[16px] md:text-[18px] hidden sm:block" style={{ color: 'var(--text-primary)' }}>أرشيف <span style={{ color: 'var(--accent-primary)' }}>GITA</span></span>
-      </div>
 
       {/* Center: Navigation Links (Desktop/Tablet) */}
-      <nav className="hidden md:flex items-center gap-[24px] lg:gap-[32px]">
+      <nav className="hidden lg:flex items-center gap-[24px] lg:gap-[32px]">
         {[
           { path: "/", label: "الأرشيف الرئيسي" },
           { path: "/leaderboard", label: "لوحة الصدارة" },
@@ -83,9 +82,9 @@ export default function Navbar() {
       </nav>
 
       {/* Left Side: Upload Button & Menu */}
-      <div className="flex items-center gap-4">
-        {/* Desktop Theme Toggle */}
-        <div className="hidden md:block">
+      <div className="flex items-center gap-2 lg:gap-4">
+        {/* Theme Toggle (Visible on all screens) */}
+        <div className="scale-[0.8] sm:scale-90 lg:scale-100 origin-left">
           <ThemeToggle />
         </div>
 
@@ -116,15 +115,16 @@ export default function Navbar() {
           </TooltipProvider>
         )}
 
-        <div className="hidden md:flex items-center gap-2 px-3 py-1.5 lg:px-4 lg:py-2 rounded-full border shadow-[0_0_10px_rgba(255,255,255,0.05)]" style={{ backgroundColor: 'var(--bg-cards)', borderColor: 'var(--border-pink)' }}>
+        <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 lg:px-4 lg:py-2 rounded-full border shadow-sm" style={{ backgroundColor: 'var(--glass-white)', borderColor: 'var(--border-pink)' }}>
           <Star size={16} className="text-yellow-500 fill-yellow-500" />
-          <span className="text-[14px] font-bold text-white">{user.petals || 0}</span>
+          <span className="text-[14px] font-bold" style={{ color: 'var(--text-primary)' }}>{user.petals || 0}</span>
         </div>
 
         <Sheet>
           <SheetTrigger asChild>
-             <button className="md:hidden h-[40px] w-[40px] rounded-full flex items-center justify-center transition-all hover:scale-110 shadow-[0_0_10px_rgba(255,255,255,0.05)]" style={{ backgroundColor: 'var(--glass-white)', color: 'var(--text-primary)' }}>
-               <Menu size={20} />
+             <button className="h-[38px] w-[38px] lg:h-[42px] lg:w-[42px] rounded-full flex items-center justify-center transition-all hover:scale-105 border shadow-sm" style={{ backgroundColor: 'var(--glass-white)', color: 'var(--text-primary)', borderColor: 'var(--border-pink)' }}>
+               <Menu className="lg:hidden" size={20} />
+               <UserIcon className="hidden lg:block" size={20} />
              </button>
           </SheetTrigger>
           <SheetContent side="left" className="w-[300px] sm:w-[400px] border-r shadow-2xl z-[100]" style={{ backgroundColor: 'rgba(26,10,15,0.95)', backdropFilter: 'blur(30px)', borderColor: 'var(--border-pink)' }}>
@@ -152,12 +152,13 @@ export default function Navbar() {
                 </div>
               </div>
 
-              {/* Mobile Theme Toggle */}
-              <div className="px-4 py-2 border-b" style={{ borderColor: 'var(--border-pink)' }}>
-                <ThemeToggle className="w-full justify-between" />
-              </div>
+
 
               <div className="space-y-2 mt-2">
+                <Button onClick={() => navigate("/files")} variant="ghost" className="w-full h-14 justify-start rounded-2xl font-black gap-4 px-6 hover:bg-white/10 lg:hidden" style={{ color: 'var(--text-primary)' }}>
+                  <BookOpen size={20} className="text-emerald-500" />
+                  الأرشيف الرئيسي
+                </Button>
                 <Button onClick={() => navigate("/leaderboard")} variant="ghost" className="w-full h-14 justify-start rounded-2xl font-black gap-4 px-6 hover:bg-white/10" style={{ color: 'var(--text-primary)' }}>
                   <Trophy size={20} className="text-yellow-500" />
                   لوحة الصدارة
@@ -188,6 +189,7 @@ export default function Navbar() {
             </div>
           </SheetContent>
         </Sheet>
+      </div>
       </div>
     </header>
   );

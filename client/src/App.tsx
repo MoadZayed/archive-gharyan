@@ -20,7 +20,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import AdminProtectedRoute from "./components/AdminProtectedRoute";
 import ModeratorProtectedRoute from "./components/ModeratorProtectedRoute";
 import WhatsAppButton from "./components/WhatsAppButton";
-import PageLoader from "./components/PageLoader";
+
 
 // Lazy Loaded Pages
 const Home = lazy(() => import("./pages/Home"));
@@ -92,7 +92,7 @@ function Router() {
 
   return (
     <>
-      <Suspense fallback={<PageLoader />}>
+      <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-background"><div className="w-16 h-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div></div>}>
         <Switch>
           <Route path="/" component={Home} />
           <Route path="/login" component={Login} />
@@ -189,9 +189,9 @@ import MobileBottomNav from "./components/MobileBottomNav";
 
 function AppContent() {
   return (
-    <div className="min-h-screen pb-32 md:pb-0 transition-all duration-1000 relative" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
+    <main className="min-h-screen pb-32 md:pb-0 transition-all duration-1000 relative" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
       <Router />
-    </div>
+    </main>
   );
 }
 

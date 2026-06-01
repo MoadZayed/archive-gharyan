@@ -11,6 +11,8 @@ const s3 = new S3Client({
   },
 });
 
+export const s3Client = s3;
+
 function normalizeKey(relKey: string): string {
   return relKey.replace(/^\/+/, "").replace(/\\/g, "/");
 }

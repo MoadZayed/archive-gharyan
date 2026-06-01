@@ -320,10 +320,10 @@ export default function Upload() {
                 <BrainCircuit size={48} />
               </motion.div>
               <h2 className="text-2xl font-black mb-4" style={{ color: 'var(--text-primary)' }}>
-                جاري التحليل بالذكاء الاصطناعي...
+                جاري التحليل  ...
               </h2>
               <p className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--accent-primary)' }}>
-                Gemini 1.5 Flash is extracting academic data
+            extracting academic data
               </p>
               <Button 
                 variant="ghost" 
@@ -382,7 +382,16 @@ export default function Upload() {
               </div>
 
               <div className="space-y-8">
-                <label className="flex flex-col items-center justify-center border-2 border-dashed rounded-[3rem] p-10 md:p-16 cursor-pointer transition-all group relative overflow-hidden" style={{ backgroundColor: 'rgba(233,30,99,0.05)', borderColor: 'var(--border-pink)' }}>
+                <label 
+                  className="flex flex-col items-center justify-center border-2 border-dashed rounded-[3rem] p-10 md:p-16 cursor-pointer transition-all group relative overflow-hidden" 
+                  style={{ backgroundColor: 'rgba(233,30,99,0.05)', borderColor: 'var(--border-pink)' }}
+                  onClick={(e) => {
+                    if (user?.registrationStatus !== 'approved' && !user?.isAdmin) {
+                      e.preventDefault();
+                      toast.error("عذراً، سيتم تفعيل ميزة رفع الملفات بعد موافقة الإدارة على حسابك.");
+                    }
+                  }}
+                >
                   <input 
                     type="file" 
                     onChange={handleFileChange} 

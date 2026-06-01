@@ -40,7 +40,11 @@ import {
   PlusCircle,
   FileText,
   Flag,
-  Megaphone
+  Megaphone,
+  ArrowUpDown,
+  Folder,
+  MessageCircle,
+  Share2
 } from "lucide-react";
 import Footer from "@/components/Footer";
 import CommentSection from "@/components/CommentSection";
@@ -574,10 +578,10 @@ export default function Files() {
                 <button
                   key={tab.id}
                   onClick={() => { setActiveTab(tab.id as any); setOffset(0); }}
-                  className={`flex items-center justify-center gap-2 px-6 py-2.5 rounded-full text-[15px] font-bold whitespace-nowrap transition-all duration-300 border ${
+                  className={`flex items-center justify-center gap-2 px-6 py-2 rounded-full text-base tracking-wide font-bold whitespace-nowrap transition-all duration-300 ${
                     activeTab === tab.id 
-                      ? 'text-white border-transparent shadow-[0_4px_15px_rgba(233,30,99,0.3)]' 
-                      : 'bg-transparent text-[var(--text-secondary)] border-[var(--border-pink)] hover:bg-[var(--glass-white)]'
+                      ? 'text-white border-b-2 border-[var(--accent-primary)] shadow-[0_4px_15px_rgba(233,30,99,0.3)]' 
+                      : 'bg-transparent text-[var(--text-secondary)] opacity-75 hover:opacity-100 hover:bg-[var(--glass-white)] border-b-2 border-transparent'
                   }`}
                   style={activeTab === tab.id ? { background: 'var(--button-gradient)' } : {}}
                 >
@@ -588,97 +592,104 @@ export default function Files() {
             </div>
 
             {/* Dropdowns */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-[16px] w-full">
-              <select 
-                value={selectedType} 
-                onChange={e => { setSelectedType(e.target.value); setOffset(0); }}
-                className="w-full h-[48px] md:h-[52px] rounded-[12px] px-4 text-[15px] outline-none appearance-none cursor-pointer font-medium"
-                style={{ backgroundColor: 'var(--glass-white)', border: '1px solid var(--border-pink)', color: 'var(--text-primary)' }}
-              >
-                <option value="" className="bg-[#2d1020]">كافة الأنواع</option>
-                <option value="exam_mid" className="bg-[#2d1020]">نصفي</option>
-                <option value="exam_final" className="bg-[#2d1020]">نهائي</option>
-                <option value="summary" className="bg-[#2d1020]">ملخص</option>
-                <option value="curriculum" className="bg-[#2d1020]">منهج</option>
-              </select>
+            <div className="flex flex-nowrap overflow-x-auto gap-2 w-full pb-2 scrollbar-hide">
+              <div className="relative min-w-[130px] flex-1">
+                <select 
+                  value={selectedType} 
+                  onChange={e => { setSelectedType(e.target.value); setOffset(0); }}
+                  className="w-full h-10 rounded-[12px] px-3 pl-8 text-sm outline-none appearance-none cursor-pointer font-medium bg-[var(--glass-white)] border border-[var(--border-pink)] text-[var(--text-primary)]"
+                >
+                  <option value="" className="bg-[#2d1020]">كافة الأنواع</option>
+                  <option value="exam_mid" className="bg-[#2d1020]">نصفي</option>
+                  <option value="exam_final" className="bg-[#2d1020]">نهائي</option>
+                  <option value="summary" className="bg-[#2d1020]">ملخص</option>
+                  <option value="curriculum" className="bg-[#2d1020]">منهج</option>
+                </select>
+                <ChevronDown className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-70 pointer-events-none" />
+              </div>
 
-              <select 
-                value={selectedYear} 
-                onChange={e => { setSelectedYear(e.target.value); setOffset(0); }}
-                className="w-full h-[48px] md:h-[52px] rounded-[12px] px-4 text-[15px] outline-none appearance-none cursor-pointer font-medium"
-                style={{ backgroundColor: 'var(--glass-white)', border: '1px solid var(--border-pink)', color: 'var(--text-primary)' }}
-              >
-                <option value="" className="bg-[#2d1020]">كافة السنين</option>
-                {Array.from({ length: 6 }, (_, i) => 2020 + i).map(y => (
-                  <option key={y} value={y} className="bg-[#2d1020]">{y}</option>
-                ))}
-              </select>
+              <div className="relative min-w-[130px] flex-1">
+                <select 
+                  value={selectedYear} 
+                  onChange={e => { setSelectedYear(e.target.value); setOffset(0); }}
+                  className="w-full h-10 rounded-[12px] px-3 pl-8 text-sm outline-none appearance-none cursor-pointer font-medium bg-[var(--glass-white)] border border-[var(--border-pink)] text-[var(--text-primary)]"
+                >
+                  <option value="" className="bg-[#2d1020]">كافة السنين</option>
+                  {Array.from({ length: 6 }, (_, i) => 2020 + i).map(y => (
+                    <option key={y} value={y} className="bg-[#2d1020]">{y}</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-70 pointer-events-none" />
+              </div>
 
               {activeTab === "all" ? (
                 <>
-                  <select 
-                    value={selectedSubject} 
-                    onChange={e => { setSelectedSubject(e.target.value); setOffset(0); }}
-                    className="w-full h-[48px] md:h-[52px] rounded-[12px] px-4 text-[15px] outline-none appearance-none cursor-pointer font-medium"
-                    style={{ backgroundColor: 'var(--glass-white)', border: '1px solid var(--border-pink)', color: 'var(--text-primary)' }}
-                  >
-                    <option value="" className="bg-[#2d1020]">كافة المواد</option>
-                    {COURSES.map(c => (
-                      <option key={c.code} value={c.name} className="bg-[#2d1020]">{c.name}</option>
-                    ))}
-                  </select>
+                  <div className="relative min-w-[130px] flex-1">
+                    <select 
+                      value={selectedSubject} 
+                      onChange={e => { setSelectedSubject(e.target.value); setOffset(0); }}
+                      className="w-full h-10 rounded-[12px] px-3 pl-8 text-sm outline-none appearance-none cursor-pointer font-medium bg-[var(--glass-white)] border border-[var(--border-pink)] text-[var(--text-primary)]"
+                    >
+                      <option value="" className="bg-[#2d1020]">كافة المواد</option>
+                      {COURSES.map(c => (
+                        <option key={c.code} value={c.name} className="bg-[#2d1020]">{c.name}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-70 pointer-events-none" />
+                  </div>
 
-                  <select 
-                    value={selectedDoctor} 
-                    onChange={e => { setSelectedDoctor(e.target.value); setOffset(0); }}
-                    className="w-full h-[48px] md:h-[52px] rounded-[12px] px-4 text-[15px] outline-none appearance-none cursor-pointer font-medium"
-                    style={{ backgroundColor: 'var(--glass-white)', border: '1px solid var(--border-pink)', color: 'var(--text-primary)' }}
-                  >
-                    <option value="" className="bg-[#2d1020]">كافة الدكاترة</option>
-                    {PROFESSORS.map(p => (
-                      <option key={p} value={p} className="bg-[#2d1020]">{p}</option>
-                    ))}
-                  </select>
+                  <div className="relative min-w-[130px] flex-1">
+                    <select 
+                      value={selectedDoctor} 
+                      onChange={e => { setSelectedDoctor(e.target.value); setOffset(0); }}
+                      className="w-full h-10 rounded-[12px] px-3 pl-8 text-sm outline-none appearance-none cursor-pointer font-medium bg-[var(--glass-white)] border border-[var(--border-pink)] text-[var(--text-primary)]"
+                    >
+                      <option value="" className="bg-[#2d1020]">كافة الدكاترة</option>
+                      {PROFESSORS.map(p => (
+                        <option key={p} value={p} className="bg-[#2d1020]">{p}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-70 pointer-events-none" />
+                  </div>
                 </>
-              ) : (
-                 <>
-                   <div className="hidden lg:block w-full"></div>
-                   <div className="hidden lg:block w-full"></div>
-                 </>
-              )}
+              ) : null}
             </div>
 
             {/* Sort & View Options */}
-            <div className="flex flex-col md:flex-row justify-between items-center w-full gap-4 pt-2">
-              <div className="flex items-center gap-3">
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="h-[40px] rounded-[10px] px-3 text-[14px] outline-none appearance-none cursor-pointer font-medium"
-                  style={{ backgroundColor: 'var(--glass-white)', border: '1px solid var(--border-pink)', color: 'var(--text-primary)' }}
+            <div className="flex flex-row justify-between items-center w-full gap-4 pt-2">
+              <div className="flex items-center rounded-lg border overflow-hidden h-9" style={{ borderColor: 'var(--border-pink)' }}>
+                <button 
+                  onClick={() => setViewMode("grid")}
+                  className={`px-3 h-full flex items-center justify-center transition-all ${viewMode === 'grid' ? 'bg-[var(--accent-primary)] text-white' : 'bg-[var(--glass-white)] text-[var(--text-muted)] hover:text-white'}`}
                 >
-                  <option value="newest" className="bg-[#2d1020]">الأحدث</option>
-                  <option value="oldest" className="bg-[#2d1020]">الأقدم</option>
-                  <option value="most_downloaded" className="bg-[#2d1020]">الأكثر تحميلاً</option>
-                  <option value="alphabetical" className="bg-[#2d1020]">أبجدي (أ-ي)</option>
-                </select>
-                <div className="flex items-center rounded-lg border overflow-hidden h-[40px]" style={{ borderColor: 'var(--border-pink)' }}>
-                  <button 
-                    onClick={() => setViewMode("grid")}
-                    className={`px-3 h-full flex items-center justify-center transition-all ${viewMode === 'grid' ? 'bg-[var(--accent-primary)] text-white' : 'bg-[var(--glass-white)] text-[var(--text-muted)] hover:text-white'}`}
-                  >
-                    <LayoutGrid size={16} />
-                  </button>
-                  <button 
-                    onClick={() => setViewMode("list")}
-                    className={`px-3 h-full flex items-center justify-center transition-all ${viewMode === 'list' ? 'bg-[var(--accent-primary)] text-white' : 'bg-[var(--glass-white)] text-[var(--text-muted)] hover:text-white'}`}
-                  >
-                    <Menu size={16} />
-                  </button>
-                </div>
+                  <LayoutGrid size={16} />
+                </button>
+                <button 
+                  onClick={() => setViewMode("list")}
+                  className={`px-3 h-full flex items-center justify-center transition-all ${viewMode === 'list' ? 'bg-[var(--accent-primary)] text-white' : 'bg-[var(--glass-white)] text-[var(--text-muted)] hover:text-white'}`}
+                >
+                  <Menu size={16} />
+                </button>
               </div>
-              <div className="text-sm font-bold opacity-70" style={{ color: 'var(--text-muted)' }}>
-                {filteredFiles.length} ملفات متوفرة
+
+              <div className="flex items-center gap-4">
+                <div className="hidden sm:flex text-sm font-medium items-center gap-1.5 text-gray-300 dark:text-gray-300 opacity-90">
+                  <Folder className="w-4 h-4" />
+                  {filteredFiles.length} ملفات מתوفرة
+                </div>
+                <div className="relative">
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="h-9 rounded-lg px-3 pl-8 text-sm outline-none appearance-none cursor-pointer font-medium bg-[var(--glass-white)] border border-[var(--border-pink)] text-[var(--text-primary)]"
+                  >
+                    <option value="newest" className="bg-[#2d1020]">الأحدث</option>
+                    <option value="oldest" className="bg-[#2d1020]">الأقدم</option>
+                    <option value="most_downloaded" className="bg-[#2d1020]">الأكثر تحميلاً</option>
+                    <option value="alphabetical" className="bg-[#2d1020]">أبجدي (أ-ي)</option>
+                  </select>
+                  <ArrowUpDown className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 opacity-70 pointer-events-none text-[var(--accent-primary)]" />
+                </div>
               </div>
             </div>
           </div>
@@ -727,31 +738,25 @@ export default function Files() {
                   onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 10px 30px rgba(233,30,99,0.2)'}
                   onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.1)'}
                 >
-                  {/* Top Section */}
-                  <div className={`flex justify-between items-start ${viewMode === 'list' ? 'flex-col gap-2 w-1/4' : 'mb-4'}`}>
+                  {/* Top Actions */}
+                  <div className={`flex justify-between items-start ${viewMode === 'list' ? 'flex-col gap-2 w-1/4' : 'mb-2'}`}>
                     <div className="flex flex-col gap-2 items-start">
-                      {/* File Type Badge */}
-                      <div className="px-3 py-1.5 rounded-full flex items-center gap-1.5 text-[13px] font-bold" style={{ backgroundColor: 'rgba(233,30,99,0.15)', color: 'var(--accent-secondary)' }}>
-                        <FileText size={14} />
-                        <span>{file.fileType === 'exam_mid' ? 'نصفي' : file.fileType === 'exam_final' ? 'نهائي' : file.fileType === 'summary' ? 'ملخص' : file.fileType === 'curriculum' ? 'منهج' : 'ملف'}</span>
-                      </div>
-                      
                       {/* Status Badge (Owner Only) */}
                       {isOwner && (
                         <div className="mt-1" onClick={(e) => e.stopPropagation()}>
                           {file.status === 'pending' && (
-                            <div className="px-2 py-1 rounded-full bg-orange-500/10 text-orange-500 border border-orange-500/20 text-[10px] font-bold flex items-center gap-1">
+                            <div className="px-2 py-1 rounded-full bg-orange-500/10 text-orange-500 border border-orange-500/20 text-[10px] font-bold flex items-center gap-1 opacity-90">
                               <Loader2 className="w-3 h-3 animate-spin" /> قيد المراجعة
                             </div>
                           )}
                           {file.status === 'approved' && (
-                            <div className="px-2 py-1 rounded-full bg-green-500/10 text-green-500 border border-green-500/20 text-[10px] font-bold flex items-center gap-1 opacity-70">
+                            <div className="px-2 py-1 rounded-full bg-green-500/10 text-green-500 border border-green-500/20 text-[10px] font-bold flex items-center gap-1 opacity-90">
                               <CheckCircle className="w-3 h-3" /> منشور
                             </div>
                           )}
                           {file.status === 'rejected' && (
                             <div className="group relative">
-                              <div className="px-2 py-1 rounded-full bg-red-500/10 text-red-500 border border-red-500/20 text-[10px] font-bold flex items-center gap-1 cursor-help">
+                              <div className="px-2 py-1 rounded-full bg-red-500/10 text-red-500 border border-red-500/20 text-[10px] font-bold flex items-center gap-1 cursor-help opacity-90">
                                 <X className="w-3 h-3" /> مرفوض
                               </div>
                               <div className="hidden group-hover:block absolute top-full right-0 mt-1 w-48 p-2 bg-red-950/90 border border-red-500/50 rounded-lg text-xs text-white z-20 shadow-xl">
@@ -763,7 +768,7 @@ export default function Files() {
                       )}
                     </div>
                     
-                    {/* Top Actions */}
+                    {/* Actions */}
                     <div className="flex items-center gap-2">
                       <button
                         onClick={(e) => {
@@ -801,6 +806,9 @@ export default function Files() {
                               <Flag size={16} /> إبلاغ
                             </DropdownMenuItem>
                           )}
+                          <DropdownMenuItem onClick={() => setFileDetailsToShow(file)} className="flex items-center gap-2 cursor-pointer hover:bg-[var(--glass-white)] h-[44px]">
+                            <CheckCircle size={16} /> التفاصيل
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
@@ -808,20 +816,33 @@ export default function Files() {
 
                   {/* Middle Section */}
                   <div className={`flex-1 flex flex-col justify-center ${viewMode === 'grid' ? 'my-2' : 'px-4'}`}>
-                    <h3 className="font-bold text-[16px] md:text-[18px] leading-[1.6] line-clamp-2" style={{ color: 'var(--text-primary)' }}>
-                      {file.subject}
-                    </h3>
-                    <p className="text-[13px] font-medium mt-2 truncate opacity-70" style={{ color: 'var(--text-secondary)' }}>
+                    <div className="flex justify-between items-start gap-2">
+                      <h3 className="font-bold text-base md:text-lg leading-[1.6] line-clamp-2 text-gray-800 dark:text-gray-100" style={{ color: 'var(--text-primary)' }}>
+                        {file.subject}
+                      </h3>
+                      <div className="px-2 py-1 rounded-md flex items-center gap-1 text-[11px] font-bold whitespace-nowrap opacity-90" style={{ backgroundColor: 'rgba(233,30,99,0.1)', color: 'var(--accent-secondary)' }}>
+                        {file.fileType === 'exam_mid' ? 'نصفي' : file.fileType === 'exam_final' ? 'نهائي' : file.fileType === 'summary' ? 'ملخص' : file.fileType === 'curriculum' ? 'منهج' : 'ملف'}
+                      </div>
+                    </div>
+                    <p className="text-[13px] font-medium mt-1 truncate text-gray-300 dark:text-gray-300" style={{ color: 'var(--text-secondary)' }}>
                       {file.fileName}
                     </p>
-                    <div className="flex items-center gap-4 mt-2">
-                      <div className="flex items-center gap-1 text-[11px]" style={{ color: 'var(--text-muted)' }}>
-                        <Download size={12} />
+                    <div className="flex items-center gap-3 mt-3">
+                      <div className="flex items-center gap-1 text-[11px] text-gray-300 dark:text-gray-300">
+                        <Heart size={14} className="opacity-90" />
+                        <span>{file.favoritesCount || 0}</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-[11px] text-gray-300 dark:text-gray-300">
+                        <Download size={14} className="opacity-90" />
                         <span>{file.downloads || 0}</span>
                       </div>
-                      <div className="flex items-center gap-1 text-[11px]" style={{ color: 'var(--text-muted)' }}>
-                        <Eye size={12} />
+                      <div className="flex items-center gap-1 text-[11px] text-gray-300 dark:text-gray-300">
+                        <Eye size={14} className="opacity-90" />
                         <span>{file.views || 0}</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-[11px] text-gray-300 dark:text-gray-300">
+                        <MessageCircle size={14} className="opacity-90" />
+                        <span>{file.comments?.length || 0}</span>
                       </div>
                     </div>
                   </div>
@@ -832,33 +853,14 @@ export default function Files() {
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <button 
-                            className="w-[44px] h-[44px] rounded-full flex items-center justify-center transition-all hover:scale-110 active:scale-95 shadow-[0_4px_10px_rgba(0,0,0,0.1)]"
-                            style={{ backgroundColor: 'var(--glass-white)', color: 'var(--text-primary)' }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const link = `${window.location.origin}/files?q=${encodeURIComponent(file.fileName)}`;
-                              navigator.clipboard.writeText(link);
-                              toast.success("تم نسخ الرابط إلى الحافظة بنجاح");
-                            }}
-                          >
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[18px] h-[18px]"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent className="bg-[#3d1530] text-white border-none shadow-xl text-xs">نسخ الرابط</TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button 
-                            className="w-[44px] h-[44px] rounded-full flex items-center justify-center transition-all hover:scale-110 active:scale-95 shadow-[0_4px_10px_rgba(0,0,0,0.1)]"
+                            className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-110 active:scale-95 shadow-[0_4px_10px_rgba(0,0,0,0.1)]"
                             style={{ backgroundColor: 'var(--glass-white)', color: 'var(--text-primary)' }}
                             onClick={(e) => {
                               e.stopPropagation();
                               handleDownload(file.id, file.fileName);
                             }}
                           >
-                            <Download size={18} />
+                            <Download size={16} />
                           </button>
                         </TooltipTrigger>
                         <TooltipContent className="bg-[#3d1530] text-white border-none shadow-xl text-xs">تحميل</TooltipContent>
@@ -869,18 +871,19 @@ export default function Files() {
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <button 
-                            className="w-[44px] h-[44px] rounded-full flex items-center justify-center transition-all hover:scale-110 active:scale-95 shadow-[0_4px_10px_rgba(0,0,0,0.1)]"
+                            className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-110 active:scale-95 shadow-[0_4px_10px_rgba(0,0,0,0.1)]"
                             style={{ backgroundColor: 'var(--glass-white)', color: 'var(--text-primary)' }}
                             onClick={(e) => {
                               e.stopPropagation();
-                              incrementViewsMutation.mutate({ fileId: file.id });
-                              setPreviewFile(file);
+                              const link = `${window.location.origin}/files?q=${encodeURIComponent(file.fileName)}`;
+                              navigator.clipboard.writeText(link);
+                              toast.success("تم نسخ الرابط إلى الحافظة بنجاح");
                             }}
                           >
-                            <Eye size={18} />
+                            <Share2 size={16} />
                           </button>
                         </TooltipTrigger>
-                        <TooltipContent className="bg-[#3d1530] text-white border-none shadow-xl text-xs">معاينة</TooltipContent>
+                        <TooltipContent className="bg-[#3d1530] text-white border-none shadow-xl text-xs">مشاركة</TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
 
@@ -888,17 +891,17 @@ export default function Files() {
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <button 
-                            className="w-[44px] h-[44px] rounded-full flex items-center justify-center transition-all hover:scale-110 active:scale-95 shadow-[0_4px_10px_rgba(0,0,0,0.1)]"
+                            className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-110 active:scale-95 shadow-[0_4px_10px_rgba(0,0,0,0.1)]"
                             style={{ backgroundColor: 'var(--glass-white)', color: 'var(--text-primary)' }}
                             onClick={(e) => {
                               e.stopPropagation();
                               setFileDetailsToShow(file);
                             }}
                           >
-                            <CheckCircle size={18} />
+                            <MessageCircle size={16} />
                           </button>
                         </TooltipTrigger>
-                        <TooltipContent className="bg-[#3d1530] text-white border-none shadow-xl text-xs">التفاصيل</TooltipContent>
+                        <TooltipContent className="bg-[#3d1530] text-white border-none shadow-xl text-xs">تعليقات</TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
                   </div>

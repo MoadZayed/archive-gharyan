@@ -7,7 +7,7 @@ import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { Loader2, Lock, User, UserCircle, ArrowRight, Shield, Sparkles, Flower, Box, Cpu, Mail, Sun, Moon } from "lucide-react";
+import { Loader2, Lock, User, UserCircle, ArrowRight, Shield, Sparkles, Flower, Box, Cpu, Mail, Sun, Moon, Eye, EyeOff } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { useTheme } from "@/contexts/ThemeContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -26,6 +26,7 @@ export default function Register() {
   const [securityQuestion, setSecurityQuestion] = useState("");
   const [securityAnswer, setSecurityAnswer] = useState("");
   const [role, setRole] = useState<"student" | "professor">("student");
+  const [showPassword, setShowPassword] = useState(false);
 
   const [isTermsOpen, setIsTermsOpen] = useState(false);
 
@@ -160,12 +161,20 @@ export default function Register() {
             <label className="text-[12px] font-black px-4 uppercase tracking-widest" style={{ color: 'var(--accent-secondary)' }}>{t("password")}</label>
             <div className="relative">
               <Lock className="absolute right-5 top-1/2 -translate-y-1/2 h-5 w-5" style={{ color: 'var(--text-muted)' }} />
+              <button 
+                type="button" 
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute left-5 top-1/2 -translate-y-1/2 transition-colors hover:text-[var(--accent-primary)] focus:outline-none"
+                style={{ color: 'var(--text-muted)' }}
+              >
+                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </button>
               <Input 
-                type="password" 
+                type={showPassword ? "text" : "password"}
                 value={password} 
                 onChange={(e) => setPassword(e.target.value)} 
                 placeholder="••••••••" 
-                className="h-[52px] pr-12 rounded-2xl font-bold transition-all border outline-none focus:ring-0 text-right"
+                className="h-[52px] pr-12 pl-12 rounded-2xl font-bold transition-all border outline-none focus:ring-0 text-right"
                 style={{ backgroundColor: 'var(--glass-white)', borderColor: 'var(--border-pink)', color: 'var(--text-primary)' }}
                 onFocus={(e) => e.target.style.boxShadow = '0 0 0 3px rgba(233,30,99,0.3)'}
                 onBlur={(e) => e.target.style.boxShadow = 'none'}
@@ -187,7 +196,6 @@ export default function Register() {
               <option value="" className="bg-[#2d1020]">اختر سؤالاً...</option>
               <option value="ما هو اسم أول مدرسة ارتدتها؟" className="bg-[#2d1020]">ما هو اسم أول مدرسة ارتدتها؟</option>
               <option value="ما هي مدينتك المفضلة؟" className="bg-[#2d1020]">ما هي مدينتك المفضلة؟</option>
-              <option value="ما هو اسم حيوانك الأليف الأول؟" className="bg-[#2d1020]">ما هو اسم حيوانك الأليف الأول؟</option>
               <option value="ما هو تخصصك المفضل؟" className="bg-[#2d1020]">ما هو تخصصك المفضل؟</option>
             </select>
           </div>
