@@ -5,7 +5,7 @@ import { useState } from "react";
 export default function WhatsAppButton() {
   const [showTooltip, setShowTooltip] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
-  const phoneNumber = "218944879547"; 
+  const phoneNumber = "218930959763"; 
   const message = encodeURIComponent("السلام عليكم، أحتاج إلى دعم فني بخصوص منصة GITA");
   const whatsappUrl = `https://wa.me/${phoneNumber}?text=${message}`;
 
